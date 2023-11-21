@@ -1,0 +1,10 @@
+tasks_list:
+  0:
+    - [["provide_install", 15, null]]
+expected_result:
+  0:
+    global_termination_time: 15
+    local_termination_time: 15
+    finished_reconf: true
+    tot_reconf_duration: 15
+    tot_uptimes_duration: 15

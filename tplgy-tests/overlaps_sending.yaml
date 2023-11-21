@@ -1,0 +1,27 @@
+tasks_list:
+  0:
+    - [["provide_install", 15.5, null]]
+  1:
+    - [["use_install", 3.12, "provide_install"]]
+  2:
+    - [["use_install", 3.12, "provide_install"]]
+expected_result:
+  0:
+    global_termination_time: 204.12
+    local_termination_time: 15.5
+    finished_reconf: true
+    tot_reconf_duration: 15.5
+    tot_uptimes_duration: 64.12
+  1:
+    global_termination_time: 204.12
+    local_termination_time: 204.12
+    finished_reconf: true
+    tot_reconf_duration: 3.12
+    tot_uptimes_duration: 64.12
+  2:
+    global_termination_time: 204.12
+    local_termination_time: 204.12
+    finished_reconf: true
+    tot_reconf_duration: 3.12
+    tot_uptimes_duration: 64.12
+
