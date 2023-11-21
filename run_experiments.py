@@ -12,7 +12,7 @@ import yaml
 from execo_engine import ParamSweeper, sweep
 
 import shared_methods
-from topologies import clique, chain, ring, star, grid, deploy_tasks_list_agg_0, deploy_tasks_list_agg_middle, deploy_tasks_list_grid_fav
+from topologies import clique, chain, ring, star, grid, tasks_list_agg_0, tasks_list_grid_fav, tasks_list_agg_middle
 
 topology_sizes = {
     "clique": {"small": 6, "medium": 16, "large": 31},
@@ -23,14 +23,14 @@ topology_sizes = {
 }
 
 tasks_list_tplgy = {
-    "star-fav": (deploy_tasks_list_agg_0, star),
-    "star-nonfav": (deploy_tasks_list_agg_middle, star),
-    "ring-fav": (deploy_tasks_list_agg_0, ring),
-    "chain-fav": (deploy_tasks_list_agg_middle, chain),
-    "chain-nonfav": (deploy_tasks_list_agg_0, chain),
-    "clique-fav": (deploy_tasks_list_agg_0, clique),
-    "grid-fav": (deploy_tasks_list_grid_fav, grid),
-    "grid-nonfav": (deploy_tasks_list_agg_0, grid),
+    "star-fav": (tasks_list_agg_0, star),
+    "star-nonfav": (tasks_list_agg_middle, star),
+    "ring-fav": (tasks_list_agg_0, ring),
+    "chain-fav": (tasks_list_agg_middle, chain),
+    "chain-nonfav": (tasks_list_agg_0, chain),
+    "clique-fav": (tasks_list_agg_0, clique),
+    "grid-fav": (tasks_list_grid_fav, grid),
+    "grid-nonfav": (tasks_list_agg_0, grid),
 }
 
 
@@ -61,12 +61,13 @@ def run_simulation(test_expe):
                 uptimes_schedule_name = f"expes-tests/{parameters['coord_name']}-{parameters['tplgy']}-{nodes_count}.json"
                 if not exists(uptimes_schedule_name):
                     print(f"No test found for {parameters['coord_name']}-{parameters['tplgy']}")
+                    continue
 
             node_arguments = {
                 "results_dir": expe_results_dir,
                 "nodes_count": nodes_count,
                 "uptimes_schedule_name": uptimes_schedule_name,
-                "tasks_list": tasks_list(nodes_count - 1),
+                "tasks_list": tasks_list(parameters['coord_name'], nodes_count - 1),
                 "topology": B,
                 "s": shared_memory.SharedMemory(f"shm_cps_{parameters['id_run']}-{shared_methods.UPT_DURATION}-{t}", create=True, size=nodes_count)
             }
@@ -87,8 +88,13 @@ def run_simulation(test_expe):
             if test_expe:
                 with open(f"expes-tests/{parameters['coord_name']}-{parameters['tplgy']}-{nodes_count}.yaml") as f:
                     expected_results = yaml.safe_load(f)["expected_result"]
-                shared_methods.verify_results(expected_results, expe_results_dir)
-            print(f"{results_dir}: done")
+                errors = shared_methods.verify_results(expected_results, expe_results_dir)
+                if len(errors) == 0:
+                    print(f"{results_dir}: ok")
+                else:
+                    print(f"{results_dir}: errors: \n" + "\n".join(errors))
+            else:
+                print(f"{results_dir}: done")
 
             # Go to next parameter
             sweeper.done(parameters)
@@ -105,7 +111,7 @@ def run_simulation(test_expe):
 if __name__ == "__main__":
     test_expe = False
     parameter_list = {
-        "coord_name": ["deploy"],
+        "coord_name": ["deploy", "update"],
         "tplgy": [
             "star-fav",
             "star-nonfav",
