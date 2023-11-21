@@ -23,14 +23,14 @@ topology_sizes = {
 }
 
 tasks_list_tplgy = {
-    "deploy-star-fav": (deploy_tasks_list_agg_0, star),
-    "deploy-star-nonfav": (deploy_tasks_list_agg_middle, star),
-    "deploy-ring-fav": (deploy_tasks_list_agg_0, ring),
-    "deploy-chain-fav": (deploy_tasks_list_agg_middle, chain),
-    "deploy-chain-nonfav": (deploy_tasks_list_agg_0, chain),
-    "deploy-clique-fav": (deploy_tasks_list_agg_0, clique),
-    "deploy-grid-fav": (deploy_tasks_list_grid_fav, grid),
-    "deploy-grid-nonfav": (deploy_tasks_list_agg_0, grid),
+    "star-fav": (deploy_tasks_list_agg_0, star),
+    "star-nonfav": (deploy_tasks_list_agg_middle, star),
+    "ring-fav": (deploy_tasks_list_agg_0, ring),
+    "chain-fav": (deploy_tasks_list_agg_middle, chain),
+    "chain-nonfav": (deploy_tasks_list_agg_0, chain),
+    "clique-fav": (deploy_tasks_list_agg_0, clique),
+    "grid-fav": (deploy_tasks_list_grid_fav, grid),
+    "grid-nonfav": (deploy_tasks_list_agg_0, grid),
 }
 
 
@@ -39,7 +39,7 @@ def run_simulation(test_expe):
     while parameters is not None:
         print(f"Doing {parameters}")
         root_results_dir = f"{os.environ['HOME']}/results-reconfiguration-esds/topologies/{['paper', 'tests'][test_expe]}"
-        results_dir = f"{parameters['use_case']}-{parameters['topology_size']}-{shared_methods.UPT_DURATION}/{parameters['id_run']}"
+        results_dir = f"{parameters['coord_name']}-{parameters['tplgy']}-{parameters['topology_size']}-{shared_methods.UPT_DURATION}/{parameters['id_run']}"
         expe_results_dir = f"{root_results_dir}/{results_dir}"
         tmp_results_dir = f"/tmp/{results_dir}"
         os.makedirs(expe_results_dir, exist_ok=True)
@@ -48,9 +48,9 @@ def run_simulation(test_expe):
 
         try:
             # Setup parameters
-            coordination_name, network_topology, _ = parameters["use_case"].split("-")
+            network_topology, _ = parameters["tplgy"].split("-")
             nodes_count = topology_sizes[network_topology][parameters["topology_size"]]
-            tasks_list, tplgy = tasks_list_tplgy[parameters["use_case"]]
+            tasks_list, tplgy = tasks_list_tplgy[parameters["tplgy"]]
             B, L = tplgy(nodes_count, shared_methods.BANDWIDTH)
             smltr = esds.Simulator({"eth0": {"bandwidth": B, "latency": L, "is_wired": False}})
             t = int(time.time()*1000)
@@ -58,9 +58,9 @@ def run_simulation(test_expe):
             if not test_expe:
                 uptimes_schedule_name = f"uptimes_schedules/{parameters['id_run']}-{shared_methods.UPT_DURATION}.json"
             else:
-                uptimes_schedule_name = f"expes-tests/{parameters['use_case']}-{nodes_count}.json"
+                uptimes_schedule_name = f"expes-tests/{parameters['coord_name']}-{parameters['tplgy']}-{nodes_count}.json"
                 if not exists(uptimes_schedule_name):
-                    print(f"No test found for {parameters['use_case']}")
+                    print(f"No test found for {parameters['coord_name']}-{parameters['tplgy']}")
 
             node_arguments = {
                 "results_dir": expe_results_dir,
@@ -85,7 +85,7 @@ def run_simulation(test_expe):
 
             # If test, verification
             if test_expe:
-                with open(f"expes-tests/{parameters['use_case']}-{nodes_count}.yaml") as f:
+                with open(f"expes-tests/{parameters['coord_name']}-{parameters['tplgy']}-{nodes_count}.yaml") as f:
                     expected_results = yaml.safe_load(f)["expected_result"]
                 shared_methods.verify_results(expected_results, expe_results_dir)
             print(f"{results_dir}: done")
@@ -105,15 +105,16 @@ def run_simulation(test_expe):
 if __name__ == "__main__":
     test_expe = False
     parameter_list = {
-        "use_case": [
-            "deploy-star-fav",
-            "deploy-star-nonfav",
-            "deploy-ring-fav",
-            "deploy-chain-fav",
-            "deploy-chain-nonfav",
-            "deploy-clique-fav",
-            "deploy-grid-nonfav",
-            "deploy-grid-fav",
+        "coord_name": ["deploy"],
+        "tplgy": [
+            "star-fav",
+            "star-nonfav",
+            "ring-fav",
+            "chain-fav",
+            "chain-nonfav",
+            "clique-fav",
+            "grid-nonfav",
+            "grid-fav",
         ],
         "topology_size": ["small", "medium", "large"],
         "id_run": [*range(30)],
