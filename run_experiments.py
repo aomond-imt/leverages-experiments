@@ -111,7 +111,7 @@ def run_simulation(test_expe):
 if __name__ == "__main__":
     test_expe = False
     parameter_list = {
-        "coord_name": ["deploy", "update"],
+        "coord_name": ["update"],
         "tplgy": [
             "star-fav",
             "star-nonfav",
