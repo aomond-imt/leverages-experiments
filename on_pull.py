@@ -6,7 +6,8 @@ import yaml
 from esds.node import Node
 from esds.plugins.power_states import PowerStates, PowerStatesComms
 
-from shared_methods import is_time_up, is_isolated_uptime, remaining_time, FREQ_POLLING, c, is_finished
+from shared_methods import is_time_up, is_isolated_uptime, remaining_time, FREQ_POLLING, c, is_finished, STRESS_CONSO, \
+    IDLE_CONSO, COMMS_CONSO, INTERFACE_NAME
 
 
 def execute(api: Node):
@@ -19,13 +20,10 @@ def execute(api: Node):
     """
     api.log(f"Parameters: {api.args}")
     s = api.args["s"]
-    interface_name = "eth0"
-    idle_conso = api.args["idle_conso"]
-    stress_conso = api.args["stress_conso"]
-    comms_conso = api.args["comms_conso"]
+    interface_name = INTERFACE_NAME
     node_cons = PowerStates(api, 0)
     comms_cons = PowerStatesComms(api)
-    comms_cons.set_power(interface_name, 0, comms_conso, comms_conso)
+    comms_cons.set_power(interface_name, 0, COMMS_CONSO, COMMS_CONSO)
     tot_uptimes, tot_msg_sent, tot_msg_rcv, tot_uptimes_duration, tot_reconf_duration, tot_sleeping_duration = 0, 0, 0, 0, 0, 0
     aggregated_send = 0  # Count the number of send computed but not simulated
     uptimes_schedule_name = api.args['uptimes_schedule_name']
@@ -59,7 +57,7 @@ def execute(api: Node):
 
         # Uptime period
         api.turn_on()
-        node_cons.set_power(idle_conso)
+        node_cons.set_power(IDLE_CONSO)
         uptime_end = uptime + duration
 
         # Coordination loop
@@ -75,10 +73,10 @@ def execute(api: Node):
                     # Execute tasks
                     max_task_time = max(task_time for _, task_time, _ in tasks_to_do)
                     api.log(f"Executing concurrent tasks {tasks_to_do}")
-                    node_cons.set_power(stress_conso)
+                    node_cons.set_power(STRESS_CONSO)
                     api.wait(max_task_time)
                     tot_reconf_duration += max_task_time
-                    node_cons.set_power(idle_conso)
+                    node_cons.set_power(IDLE_CONSO)
                     for task_name, _, _ in tasks_to_do:
                         deps_retrieved.add(task_name)
 
@@ -147,7 +145,7 @@ def execute(api: Node):
                             deps_to_retrieve.remove(dep)
 
             if not is_finished(s):
-                api.wait(min(1, remaining_time(api, uptime_end)))
+                api.wait(min(FREQ_POLLING, remaining_time(api, uptime_end)))
 
         tot_uptimes += 1
         tot_uptimes_duration += c(api) - uptime
@@ -171,7 +169,7 @@ def execute(api: Node):
             "global_termination_time": c(api),
             "local_termination_time": local_termination,
             "node_cons": node_cons.energy,
-            "comms_cons": float(comms_cons.get_energy() + aggregated_send * (257 / 6250) * comms_conso),
+            "comms_cons": float(comms_cons.get_energy() + aggregated_send * (257 / 6250) * COMMS_CONSO),
             "tot_uptimes": tot_uptimes,
             "tot_msg_sent": tot_msg_sent,
             "tot_msg_rcv": tot_msg_rcv,

@@ -1,37 +1,30 @@
-import math
-import subprocess, os
+import os
 import sys
-import traceback
 from contextlib import redirect_stdout
-from multiprocessing import Process, cpu_count, shared_memory
-from multiprocessing.pool import Pool
+from multiprocessing import Process, shared_memory
 
 import esds
-import numpy as np
 import yaml
 
-from topologies import clique, chain, ring, star, grid
+from topologies import clique, chain, ring, grid
 
-from shared_methods import verify_results
+from shared_methods import verify_results, BANDWIDTH
 
 env_with_pythonpath = os.environ.copy()
 env_with_pythonpath["PYTHONPATH"] = env_with_pythonpath["PYTHONPATH"] + ":" + os.path.dirname(os.path.realpath(__file__))
-FREQ_POLLING = 1
-LORA_BW = 50_000
-
 
 tests_topologies = {
-    "solo_on": clique(1, LORA_BW),
-    "use_provide": clique(2, LORA_BW),
-    "overlaps_sending": clique(3, LORA_BW),
-    "actions_overflow": clique(2, LORA_BW),
-    "chained_one_provide": chain(3, LORA_BW),
-    "chained_three_provides": chain(3, LORA_BW),
-    "ring_one_provide": ring(4, LORA_BW),
-    "ring_three_aggregators": ring(6, LORA_BW),
-    "chained_aggregator_use": chain(5, LORA_BW),
-    "concurrent_tasks": clique(4, LORA_BW),
-    "grid-9": grid(9, LORA_BW),
+    "solo_on": clique(1, BANDWIDTH),
+    "use_provide": clique(2, BANDWIDTH),
+    "overlaps_sending": clique(3, BANDWIDTH),
+    "actions_overflow": clique(2, BANDWIDTH),
+    "chained_one_provide": chain(3, BANDWIDTH),
+    "chained_three_provides": chain(3, BANDWIDTH),
+    "ring_one_provide": ring(4, BANDWIDTH),
+    "ring_three_aggregators": ring(6, BANDWIDTH),
+    "chained_aggregator_use": chain(5, BANDWIDTH),
+    "concurrent_tasks": clique(4, BANDWIDTH),
+    "grid-9": grid(9, BANDWIDTH),
 }
 
 
@@ -54,10 +47,6 @@ def run_simulation(test_name, tasks_list):
     node_neighbors = compute_neighborhood(B)
     nodes_count = len(tasks_list.keys())
     arguments = {
-        "stress_conso": 1.358,
-        "idle_conso": 1.339,
-        "comms_conso": 0.16,
-        "bandwidth": 6250,
         "results_dir": f"/tmp/{test_name}",
         "nodes_count": nodes_count,
         "uptimes_schedule_name": f"tplgy-tests/{test_name}.json",

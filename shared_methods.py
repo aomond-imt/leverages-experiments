@@ -1,5 +1,14 @@
+import os
+
 import yaml
 
+HOME_DIR = os.environ['HOME']
+INTERFACE_NAME = "eth0"
+IDLE_CONSO = 1.339
+STRESS_CONSO = 2.697
+COMMS_CONSO = 0.16
+BANDWIDTH = 50_000
+UPT_DURATION = 60
 FREQ_POLLING = 1
 
 
@@ -9,8 +18,8 @@ def is_isolated_uptime(node_num, hour_num, uptime_schedules, nodes_count, topolo
     Optimization method for simulation
     :return: True if an uptime never overlap during this hour
     """
-    uptime_start, uptime_duration = uptime_schedules[node_num][hour_num]
-    uptime_end = uptime_start + uptime_duration
+    uptime_start, _ = uptime_schedules[node_num][hour_num]
+    uptime_end = uptime_start + UPT_DURATION
     # print(f"-- node {node_num}, {hour_num} round, {uptime_start}s/{uptime_end}s --")
     for n_node_num, node_schedule in enumerate(uptime_schedules[:nodes_count]):
         if n_node_num != node_num:
@@ -49,13 +58,11 @@ def verify_results(expected_result, test_dir):
             result = yaml.safe_load(f)
 
         # Check exact results
-        # for key in ["finished_reconf", "tot_aggregated_send", "tot_reconf_duration"]:
         for key in ["finished_reconf", "tot_reconf_duration"]:
             if round(result[key], 2) != round(expected_node_results[key], 2):
                 errors.append(f"Error {key} node {node_num}: expected {expected_node_results[key]} got {result[key]}")
 
-        # Results with approximation tolerance
-        # for key in ["global_termination_time", "tot_uptimes_duration", "tot_msg_sent"]:
+        # Results with approximation tolerance due to communications
         for key in ["global_termination_time", "local_termination_time", "tot_uptimes_duration"]:
             delta = abs(result[key] - expected_node_results[key])
             if delta > FREQ_POLLING * 5:

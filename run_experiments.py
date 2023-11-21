@@ -1,7 +1,6 @@
 import math
 import os
 import shutil
-import sys
 import traceback
 from contextlib import redirect_stdout
 from multiprocessing import cpu_count, shared_memory, Process
@@ -40,7 +39,7 @@ def run_simulation(test_expe):
     while parameters is not None:
         print(f"Doing {parameters}")
         root_results_dir = f"{os.environ['HOME']}/results-reconfiguration-esds/topologies/{['paper', 'tests'][test_expe]}"
-        results_dir = f"{parameters['use_case']}-{parameters['topology_size']}-{parameters['uptime_duration']}/{parameters['id_run']}"
+        results_dir = f"{parameters['use_case']}-{parameters['topology_size']}-{shared_methods.UPT_DURATION}/{parameters['id_run']}"
         expe_results_dir = f"{root_results_dir}/{results_dir}"
         tmp_results_dir = f"/tmp/{results_dir}"
         os.makedirs(expe_results_dir, exist_ok=True)
@@ -52,31 +51,25 @@ def run_simulation(test_expe):
             coordination_name, network_topology, _ = parameters["use_case"].split("-")
             nodes_count = topology_sizes[network_topology][parameters["topology_size"]]
             tasks_list, tplgy = tasks_list_tplgy[parameters["use_case"]]
-            B, L = tplgy(nodes_count, parameters["bandwidth"])
+            B, L = tplgy(nodes_count, shared_methods.BANDWIDTH)
             smltr = esds.Simulator({"eth0": {"bandwidth": B, "latency": L, "is_wired": False}})
             t = int(time.time()*1000)
 
-            current_dir_name = os.path.dirname(os.path.abspath(__file__))
             if not test_expe:
-                uptimes_schedule_name = f"{current_dir_name}/uptimes_schedules/{parameters['id_run']}-{parameters['uptime_duration']}.json"
+                uptimes_schedule_name = f"uptimes_schedules/{parameters['id_run']}-{shared_methods.UPT_DURATION}.json"
             else:
-                uptimes_schedule_name = f"{current_dir_name}/expe_tests/{parameters['use_case']}-{nodes_count}.json"
+                uptimes_schedule_name = f"expes-tests/{parameters['use_case']}-{nodes_count}.json"
                 if not exists(uptimes_schedule_name):
                     print(f"No test found for {parameters['use_case']}")
 
             node_arguments = {
-                "stress_conso": parameters["stress_conso"],
-                "idle_conso": parameters["idle_conso"],
-                "comms_conso": parameters["comms_conso"],
-                "bandwidth": parameters["bandwidth"],
                 "results_dir": expe_results_dir,
                 "nodes_count": nodes_count,
                 "uptimes_schedule_name": uptimes_schedule_name,
                 "tasks_list": tasks_list(nodes_count - 1),
                 "topology": B,
-                "s": shared_memory.SharedMemory(f"shm_cps_{parameters['id_run']}-{parameters['uptime_duration']}-{t}", create=True, size=nodes_count)
+                "s": shared_memory.SharedMemory(f"shm_cps_{parameters['id_run']}-{shared_methods.UPT_DURATION}-{t}", create=True, size=nodes_count)
             }
-            sys.path.append("..")
 
             # Setup and launch simulation
             for node_num in range(nodes_count):
@@ -92,7 +85,7 @@ def run_simulation(test_expe):
 
             # If test, verification
             if test_expe:
-                with open(f"{current_dir_name}/expe_tests/{parameters['use_case']}-{nodes_count}.yaml") as f:
+                with open(f"expes-tests/{parameters['use_case']}-{nodes_count}.yaml") as f:
                     expected_results = yaml.safe_load(f)["expected_result"]
                 shared_methods.verify_results(expected_results, expe_results_dir)
             print(f"{results_dir}: done")
@@ -123,18 +116,13 @@ if __name__ == "__main__":
             "deploy-grid-fav",
         ],
         "topology_size": ["small", "medium", "large"],
-        "stress_conso": [2.697],
-        "idle_conso": [1.339],
-        "comms_conso": [0.16],
-        "bandwidth": [50_000],
         "id_run": [*range(30)],
-        "uptime_duration": [60]
     }
     sweeps = sweep(parameter_list)
 
     # Initialise sweeper in global scope to be copied on all processes
     sweeper = ParamSweeper(
-        persistence_dir=os.path.join(os.environ['HOME'], "optim-esds-sweeper"+"-test"*test_expe), sweeps=sweeps, save_sweeps=True
+        persistence_dir=os.path.join(shared_methods.HOME_DIR, "optim-esds-sweeper" + "-test" * test_expe), sweeps=sweeps, save_sweeps=True
     )
 
     if test_expe:
