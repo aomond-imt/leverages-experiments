@@ -1,7 +1,12 @@
-from esds.node import Node
+import copy
+import json
+import os
 
-from shared_methods import initialise_simulation, is_time_up, is_isolated_uptime, remaining_time, \
-    FREQ_POLLING, terminate_simulation, c, is_finished
+import yaml
+from esds.node import Node
+from esds.plugins.power_states import PowerStates, PowerStatesComms
+
+from shared_methods import is_time_up, is_isolated_uptime, remaining_time, FREQ_POLLING, c, is_finished
 
 
 def execute(api: Node):
@@ -12,29 +17,26 @@ def execute(api: Node):
     :param api:
     :return:
     """
-    (
-        aggregated_send,
-        all_uptimes_schedules,
-        comms_cons,
-        comms_conso,
-        current_concurrent_tasks,
-        idle_conso,
-        node_cons,
-        nodes_count,
-        results_dir,
-        retrieved_data,
-        s,
-        stress_conso,
-        tasks_list,
-        tot_msg_rcv,
-        tot_msg_sent,
-        tot_reconf_duration,
-        tot_sleeping_duration,
-        tot_uptimes,
-        tot_uptimes_duration,
-        uptimes_schedule,
-        topology
-    ) = initialise_simulation(api)
+    api.log(f"Parameters: {api.args}")
+    s = api.args["s"]
+    interface_name = "eth0"
+    idle_conso = api.args["idle_conso"]
+    stress_conso = api.args["stress_conso"]
+    comms_conso = api.args["comms_conso"]
+    node_cons = PowerStates(api, 0)
+    comms_cons = PowerStatesComms(api)
+    comms_cons.set_power(interface_name, 0, comms_conso, comms_conso)
+    tot_uptimes, tot_msg_sent, tot_msg_rcv, tot_uptimes_duration, tot_reconf_duration, tot_sleeping_duration = 0, 0, 0, 0, 0, 0
+    aggregated_send = 0  # Count the number of send computed but not simulated
+    uptimes_schedule_name = api.args['uptimes_schedule_name']
+    with open(uptimes_schedule_name) as f:
+        all_uptimes_schedules = json.load(f)  # Get all uptimes schedules for simulation optimization
+    uptimes_schedule = all_uptimes_schedules[api.node_id]  # Node uptime schedule
+    tasks_list = copy.deepcopy(api.args["tasks_list"][api.node_id])
+    current_concurrent_tasks = tasks_list.pop(0)  # Current task trying to be run
+    results_dir = api.args["results_dir"]
+    nodes_count = api.args["nodes_count"]
+    topology = api.args["topology"]
 
     deps_to_retrieve = set()
     for _, _, task_dep in current_concurrent_tasks:
@@ -154,6 +156,27 @@ def execute(api: Node):
             api.log("All nodes finished, terminating")
             break
 
-    terminate_simulation(aggregated_send, api, comms_cons, comms_conso, current_concurrent_tasks, node_cons, results_dir, s,
-                         tot_msg_rcv, tot_msg_sent, tot_reconf_duration, tot_sleeping_duration, tot_uptimes,
-                         tot_uptimes_duration, local_termination)
+    # Terminate
+    api.log("Terminating")
+    api.turn_off()
+
+    # Report metrics
+    node_cons.set_power(0)
+    node_cons.report_energy()
+    comms_cons.report_energy()
+    os.makedirs(results_dir, exist_ok=True)
+    with open(f"{results_dir}/{api.node_id}.yaml", "w") as f:
+        yaml.safe_dump({
+            "finished_reconf": current_concurrent_tasks is None,
+            "global_termination_time": c(api),
+            "local_termination_time": local_termination,
+            "node_cons": node_cons.energy,
+            "comms_cons": float(comms_cons.get_energy() + aggregated_send * (257 / 6250) * comms_conso),
+            "tot_uptimes": tot_uptimes,
+            "tot_msg_sent": tot_msg_sent,
+            "tot_msg_rcv": tot_msg_rcv,
+            "tot_aggregated_send": aggregated_send,
+            "tot_uptimes_duration": tot_uptimes_duration,
+            "tot_reconf_duration": tot_reconf_duration,
+            "tot_sleeping_duration": tot_sleeping_duration,
+        }, f)
