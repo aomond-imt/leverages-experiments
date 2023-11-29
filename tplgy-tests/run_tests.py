@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from contextlib import redirect_stdout
@@ -46,10 +47,12 @@ def run_simulation(test_name, tasks_list):
     s = esds.Simulator({"eth0": {"bandwidth": B, "latency": L, "is_wired": False}})
     node_neighbors = compute_neighborhood(B)
     nodes_count = len(tasks_list.keys())
+    with open(f"tplgy-tests/{test_name}.json") as f:
+        all_uptimes_schedules = json.load(f)
     arguments = {
         "results_dir": f"/tmp/{test_name}",
         "nodes_count": nodes_count,
-        "uptimes_schedule_name": f"tplgy-tests/{test_name}.json",
+        "all_uptimes_schedules": all_uptimes_schedules,
         "tasks_list": tasks_list,
         "neighbor_nodes": node_neighbors,
         "topology": B,
