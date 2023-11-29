@@ -1,3 +1,4 @@
+import json
 import math
 import os
 import shutil
@@ -52,10 +53,12 @@ def run_simulation(test_expe, sweeper):
                     print(f"No test found for {parameters['tplgy_name']}")
                     continue
 
+            with open(uptimes_schedule_name) as f:
+                all_uptimes_schedules = json.load(f)  # Get complete view of uptimes schedules for aggregated_send optimization
             node_arguments = {
                 "results_dir": expe_results_dir,
                 "nodes_count": nodes_count,
-                "uptimes_schedule_name": uptimes_schedule_name,
+                "all_uptimes_schedules": all_uptimes_schedules,
                 "tasks_list": tasks_list(nodes_count - 1),
                 "topology": B,
                 "s": shared_memory.SharedMemory(f"shm_cps_{time.time_ns()}", create=True, size=nodes_count)
@@ -100,7 +103,7 @@ def run_simulation(test_expe, sweeper):
 
 
 def main():
-    test_expe = True
+    test_expe = False
     if test_expe:
         print("Testing")
     else:

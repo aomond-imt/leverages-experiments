@@ -1,5 +1,4 @@
 import copy
-import json
 
 import yaml
 from esds.node import Node
@@ -24,10 +23,7 @@ def execute(api: Node):
     comms_cons.set_power(INTERFACE_NAME, 0, COMMS_CONSO, COMMS_CONSO)
     tot_uptimes, tot_msg_sent, tot_msg_rcv, tot_uptimes_duration, tot_reconf_duration, tot_sleeping_duration = 0, 0, 0, 0, 0, 0
     aggregated_send = 0  # Number of send computed but not simulated
-    uptimes_schedule_name = api.args['uptimes_schedule_name']
-    with open(uptimes_schedule_name) as f:
-        all_uptimes_schedules = json.load(f)  # Get complete view of uptimes schedules for aggregated_send optimization
-    uptimes_schedule = all_uptimes_schedules[api.node_id]  # Node uptime schedule
+    uptimes_schedule = api.args['all_uptimes_schedules'][api.node_id]  # Node uptime schedule
     tasks_list = copy.deepcopy(api.args["tasks_list"][api.node_id])
     current_parallel_tasks = tasks_list.pop(0)  # Current tasks trying to be run
     results_dir = api.args["results_dir"]
@@ -91,7 +87,7 @@ def execute(api: Node):
                         api.log(f"Next parallel tasks: {current_parallel_tasks}")
                         api.log(f"deps_to_retrieve: {deps_to_retrieve}")
 
-            if is_isolated_uptime(api.node_id, tot_uptimes, all_uptimes_schedules, nodes_count, topology) and not is_finished(s) and not is_time_up(api, uptime_end):
+            if is_isolated_uptime(api.node_id, tot_uptimes, api.args['all_uptimes_schedules'], nodes_count, topology) and not is_finished(s) and not is_time_up(api, uptime_end):
                 remaining_t = remaining_time(api, uptime_end)
                 api.wait(remaining_t)
                 th_aggregated_send = remaining_t / ((257 / 6250) + 0.01 + FREQ_POLLING)
