@@ -1,13 +1,12 @@
 import copy
 import json
-import os
 
 import yaml
 from esds.node import Node
 from esds.plugins.power_states import PowerStates, PowerStatesComms
 
 from shared_methods import is_time_up, is_isolated_uptime, remaining_time, FREQ_POLLING, c, is_finished, STRESS_CONSO, \
-    IDLE_CONSO, COMMS_CONSO, INTERFACE_NAME
+    IDLE_CONSO, COMMS_CONSO, INTERFACE_NAME, UPT_DURATION
 
 
 def execute(api: Node):
@@ -20,33 +19,27 @@ def execute(api: Node):
     """
     api.log(f"Parameters: {api.args}")
     s = api.args["s"]
-    interface_name = INTERFACE_NAME
     node_cons = PowerStates(api, 0)
     comms_cons = PowerStatesComms(api)
-    comms_cons.set_power(interface_name, 0, COMMS_CONSO, COMMS_CONSO)
+    comms_cons.set_power(INTERFACE_NAME, 0, COMMS_CONSO, COMMS_CONSO)
     tot_uptimes, tot_msg_sent, tot_msg_rcv, tot_uptimes_duration, tot_reconf_duration, tot_sleeping_duration = 0, 0, 0, 0, 0, 0
-    aggregated_send = 0  # Count the number of send computed but not simulated
+    aggregated_send = 0  # Number of send computed but not simulated
     uptimes_schedule_name = api.args['uptimes_schedule_name']
     with open(uptimes_schedule_name) as f:
-        all_uptimes_schedules = json.load(f)  # Get all uptimes schedules for simulation optimization
+        all_uptimes_schedules = json.load(f)  # Get complete view of uptimes schedules for aggregated_send optimization
     uptimes_schedule = all_uptimes_schedules[api.node_id]  # Node uptime schedule
     tasks_list = copy.deepcopy(api.args["tasks_list"][api.node_id])
-    current_concurrent_tasks = tasks_list.pop(0)  # Current task trying to be run
+    current_parallel_tasks = tasks_list.pop(0)  # Current tasks trying to be run
     results_dir = api.args["results_dir"]
     nodes_count = api.args["nodes_count"]
     topology = api.args["topology"]
 
-    deps_to_retrieve = set()
-    for _, _, task_dep in current_concurrent_tasks:
-        deps_to_retrieve.add(task_dep)
-
+    deps_to_retrieve = set(task_dep for _,_,task_dep in current_parallel_tasks)
     api.log(f"deps_to_retrieve: {deps_to_retrieve}")
-
     deps_retrieved = {None}
     local_termination = 0
-
     # Duty-cycle simulation
-    for uptime, duration in uptimes_schedule:
+    for uptime in uptimes_schedule:
         # Sleeping period
         node_cons.set_power(0)
         api.turn_off()
@@ -58,13 +51,13 @@ def execute(api: Node):
         # Uptime period
         api.turn_on()
         node_cons.set_power(IDLE_CONSO)
-        uptime_end = uptime + duration
+        uptime_end = uptime + UPT_DURATION
 
         # Coordination loop
         while not is_time_up(api, uptime_end) and not is_finished(s):
-            if current_concurrent_tasks is not None:
+            if current_parallel_tasks is not None:
                 tasks_to_do = []
-                for task in current_concurrent_tasks:
+                for task in current_parallel_tasks:
                     _, _, task_dep = task
                     if task_dep in deps_retrieved:
                         tasks_to_do.append(task)
@@ -72,7 +65,7 @@ def execute(api: Node):
                 if len(tasks_to_do) > 0:
                     # Execute tasks
                     max_task_time = max(task_time for _, task_time, _ in tasks_to_do)
-                    api.log(f"Executing concurrent tasks {tasks_to_do}")
+                    api.log(f"Executing parallel tasks {tasks_to_do}")
                     node_cons.set_power(STRESS_CONSO)
                     api.wait(max_task_time)
                     tot_reconf_duration += max_task_time
@@ -81,21 +74,21 @@ def execute(api: Node):
                         deps_retrieved.add(task_name)
 
                 for task in tasks_to_do:
-                    current_concurrent_tasks.remove(task)
+                    current_parallel_tasks.remove(task)
 
-                if len(current_concurrent_tasks) == 0:
-                    current_concurrent_tasks = tasks_list.pop(0) if len(tasks_list) > 0 else None
-                    s.buf[api.node_id] = current_concurrent_tasks is None
-                    if current_concurrent_tasks is not None:
-                        for _, _, task_dep in current_concurrent_tasks:
+                if len(current_parallel_tasks) == 0:
+                    current_parallel_tasks = tasks_list.pop(0) if len(tasks_list) > 0 else None
+                    s.buf[api.node_id] = int(current_parallel_tasks is None)
+                    if current_parallel_tasks is not None:
+                        for _, _, task_dep in current_parallel_tasks:
                             deps_to_retrieve.add(task_dep)
 
                     # Save metrics
-                    if current_concurrent_tasks is None:
+                    if current_parallel_tasks is None:
                         local_termination = c(api)
                         api.log("All tasks done")
                     else:
-                        api.log(f"Next concurrent tasks: {current_concurrent_tasks}")
+                        api.log(f"Next parallel tasks: {current_parallel_tasks}")
                         api.log(f"deps_to_retrieve: {deps_to_retrieve}")
 
             if is_isolated_uptime(api.node_id, tot_uptimes, all_uptimes_schedules, nodes_count, topology) and not is_finished(s) and not is_time_up(api, uptime_end):
@@ -108,7 +101,7 @@ def execute(api: Node):
                 if int(th_aggregated_send) - th_aggregated_send <= 257 / 6250:
                     aggregated_send += 1
 
-                api.log(f"Isolated uptime, simulating {th_aggregated_send} sends")
+                # api.log(f"Isolated uptime, simulating {th_aggregated_send} sends")
 
             # Ask for missing deps
             if len(deps_to_retrieve) > 0 and not is_time_up(api, uptime_end):
@@ -148,7 +141,7 @@ def execute(api: Node):
                 api.wait(min(FREQ_POLLING, remaining_time(api, uptime_end)))
 
         tot_uptimes += 1
-        tot_uptimes_duration += c(api) - uptime
+        tot_uptimes_duration += c(api) - uptime  # TODO: check value
 
         if is_finished(s):
             api.log("All nodes finished, terminating")
@@ -162,10 +155,9 @@ def execute(api: Node):
     node_cons.set_power(0)
     node_cons.report_energy()
     comms_cons.report_energy()
-    os.makedirs(results_dir, exist_ok=True)
     with open(f"{results_dir}/{api.node_id}.yaml", "w") as f:
         yaml.safe_dump({
-            "finished_reconf": current_concurrent_tasks is None,
+            "finished_reconf": current_parallel_tasks is None,
             "global_termination_time": c(api),
             "local_termination_time": local_termination,
             "node_cons": node_cons.energy,

@@ -14,14 +14,6 @@ from execo_engine import ParamSweeper, sweep
 import shared_methods
 from topologies import clique, chain, ring, star, grid, tasks_list_agg_0, tasks_list_grid_fav, tasks_list_agg_middle
 
-topology_sizes = {
-    "clique": {"small": 6, "medium": 16, "large": 31},
-    "chain": {"small": 6, "medium": 16, "large": 31},
-    "ring": {"small": 6, "medium": 16, "large": 31},
-    "star": {"small": 6, "medium": 16, "large": 31},
-    "grid": {"small": 9, "medium": 16, "large": 25}
-}
-
 tasks_list_tplgy = {
     "star-fav": (tasks_list_agg_0, star),
     "star-nonfav": (tasks_list_agg_middle, star),
@@ -34,45 +26,44 @@ tasks_list_tplgy = {
 }
 
 
-def run_simulation(test_expe):
+def run_simulation(test_expe, sweeper):
     parameters = sweeper.get_next()
     while parameters is not None:
-        print(f"Doing {parameters}")
         root_results_dir = f"{os.environ['HOME']}/results-reconfiguration-esds/topologies/{['paper', 'tests'][test_expe]}"
-        results_dir = f"{parameters['coord_name']}-{parameters['tplgy']}-{parameters['topology_size']}-{shared_methods.UPT_DURATION}/{parameters['id_run']}"
+        results_dir = f"{parameters['tplgy_name']}-{parameters['nodes_count']}/{parameters['id_run']}"
         expe_results_dir = f"{root_results_dir}/{results_dir}"
-        tmp_results_dir = f"/tmp/{results_dir}"
+        debug_file_dir = f"{shared_methods.TMP_DIR}/{results_dir}"
         os.makedirs(expe_results_dir, exist_ok=True)
-        os.makedirs(tmp_results_dir, exist_ok=True)
-        debug_file_path = f"{tmp_results_dir}/debug.txt"
+        os.makedirs(debug_file_dir, exist_ok=True)
+        debug_file_path = f"{debug_file_dir}/debug.txt"
 
         try:
             # Setup parameters
-            network_topology, _ = parameters["tplgy"].split("-")
-            nodes_count = topology_sizes[network_topology][parameters["topology_size"]]
-            tasks_list, tplgy = tasks_list_tplgy[parameters["tplgy"]]
-            B, L = tplgy(nodes_count, shared_methods.BANDWIDTH)
+            nodes_count = parameters["nodes_count"]
+            tasks_list, tplgy_func = tasks_list_tplgy[parameters["tplgy_name"]]
+            B, L = tplgy_func(nodes_count, shared_methods.BANDWIDTH)
             smltr = esds.Simulator({"eth0": {"bandwidth": B, "latency": L, "is_wired": False}})
-            t = int(time.time()*1000)
 
             if not test_expe:
                 uptimes_schedule_name = f"uptimes_schedules/{parameters['id_run']}-{shared_methods.UPT_DURATION}.json"
             else:
-                uptimes_schedule_name = f"expes-tests/{parameters['coord_name']}-{parameters['tplgy']}-{nodes_count}.json"
+                uptimes_schedule_name = f"expes-tests/{parameters['tplgy_name']}.json"
                 if not exists(uptimes_schedule_name):
-                    print(f"No test found for {parameters['coord_name']}-{parameters['tplgy']}")
+                    print(f"No test found for {parameters['tplgy_name']}")
                     continue
 
             node_arguments = {
                 "results_dir": expe_results_dir,
                 "nodes_count": nodes_count,
                 "uptimes_schedule_name": uptimes_schedule_name,
-                "tasks_list": tasks_list(parameters['coord_name'], nodes_count - 1),
+                "tasks_list": tasks_list(nodes_count - 1),
                 "topology": B,
-                "s": shared_memory.SharedMemory(f"shm_cps_{parameters['id_run']}-{shared_methods.UPT_DURATION}-{t}", create=True, size=nodes_count)
+                "s": shared_memory.SharedMemory(f"shm_cps_{time.time_ns()}", create=True, size=nodes_count)
             }
 
             # Setup and launch simulation
+            print(f"Starting {parameters}")
+            start_time = time.perf_counter()
             for node_num in range(nodes_count):
                 smltr.create_node("on_pull", interfaces=["eth0"], args=node_arguments)
             with open(debug_file_path, "w") as f:
@@ -86,7 +77,7 @@ def run_simulation(test_expe):
 
             # If test, verification
             if test_expe:
-                with open(f"expes-tests/{parameters['coord_name']}-{parameters['tplgy']}-{nodes_count}.yaml") as f:
+                with open(f"expes-tests/{parameters['tplgy_name']}.yaml") as f:
                     expected_results = yaml.safe_load(f)["expected_result"]
                 errors = shared_methods.verify_results(expected_results, expe_results_dir)
                 if len(errors) == 0:
@@ -94,7 +85,7 @@ def run_simulation(test_expe):
                 else:
                     print(f"{results_dir}: errors: \n" + "\n".join(errors))
             else:
-                print(f"{results_dir}: done")
+                print(f"{results_dir}: done in {round(time.perf_counter() - start_time, 2)}s")
 
             # Go to next parameter
             sweeper.done(parameters)
@@ -108,11 +99,15 @@ def run_simulation(test_expe):
             parameters = sweeper.get_next()
 
 
-if __name__ == "__main__":
-    test_expe = False
+def main():
+    test_expe = True
+    if test_expe:
+        print("Testing")
+    else:
+        print("Simulation start")
+
     parameter_list = {
-        "coord_name": ["update"],
-        "tplgy": [
+        "tplgy_name": [
             "star-fav",
             "star-nonfav",
             "ring-fav",
@@ -122,26 +117,32 @@ if __name__ == "__main__":
             "grid-nonfav",
             "grid-fav",
         ],
-        "topology_size": ["small", "medium", "large"],
+        "nodes_count": [9, 16, 25],
         "id_run": [*range(30)],
     }
-    sweeps = sweep(parameter_list)
 
-    # Initialise sweeper in global scope to be copied on all processes
-    sweeper = ParamSweeper(
-        persistence_dir=os.path.join(shared_methods.HOME_DIR, "optim-esds-sweeper" + "-test" * test_expe), sweeps=sweeps, save_sweeps=True
-    )
-
-    if test_expe:
-        print("Testing")
+    # Create parameters list/sweeper
+    if not test_expe:
+        persistence_dir = f"{shared_methods.HOME_DIR}/optim-esds-sweeper"
+        sweeps = sweep(parameter_list)
     else:
-        print("Simulation start")
+        persistence_dir = f"{shared_methods.TMP_DIR}/test-{int(time.time())}"
+        sweeps = sweep({"tplgy_name": parameter_list["tplgy_name"], "nodes_count": [6], "id_run": [0]})
+
+    # Sweeper read/write is thread-safe even on NFS (https://mimbert.gitlabpages.inria.fr/execo/execo_engine.html?highlight=paramsweeper#execo_engine.sweep.ParamSweeper)
+    sweeper = ParamSweeper(
+        persistence_dir=persistence_dir, sweeps=sweeps, save_sweeps=True
+    )
 
     nb_cores = math.ceil(cpu_count() * 0.5)
     processes = []
     for _ in range(nb_cores):
-        p = Process(target=run_simulation, args=(test_expe,))
+        p = Process(target=run_simulation, args=(test_expe, sweeper))
         p.start()
         processes.append(p)
     for p in processes:
         p.join()
+
+
+if __name__ == "__main__":
+    main()

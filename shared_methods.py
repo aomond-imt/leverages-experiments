@@ -3,31 +3,32 @@ import os
 import yaml
 
 HOME_DIR = os.environ['HOME']
+TMP_DIR = "/tmp"
 INTERFACE_NAME = "eth0"
 IDLE_CONSO = 1.339
 STRESS_CONSO = 2.697
 COMMS_CONSO = 0.16
 BANDWIDTH = 50_000
 UPT_DURATION = 60
+COORD_NAME = "update"
 FREQ_POLLING = 1
 
 
 def is_isolated_uptime(node_num, hour_num, uptime_schedules, nodes_count, topology):
     """
-    TODO: check if an overlap can happen between current hour and previous hour
     Optimization method for simulation
-    :return: True if an uptime never overlap during this hour
+    :return: True if an uptime never overlap with a neighbor during the hour
     """
-    uptime_start, _ = uptime_schedules[node_num][hour_num]
+    uptime_start = uptime_schedules[node_num][hour_num]
     uptime_end = uptime_start + UPT_DURATION
     # print(f"-- node {node_num}, {hour_num} round, {uptime_start}s/{uptime_end}s --")
     for n_node_num, node_schedule in enumerate(uptime_schedules[:nodes_count]):
-        if n_node_num != node_num:
-            n_uptime_start, n_uptime_duration = node_schedule[hour_num]
-            n_uptime_end = n_uptime_start + n_uptime_duration
-            res = min(uptime_end, n_uptime_end) - max(uptime_start, n_uptime_start)
+        if n_node_num != node_num and topology[node_num][n_node_num] > 0:
+            n_uptime_start = node_schedule[hour_num]
+            n_uptime_end = n_uptime_start + UPT_DURATION
+            overlap_duration = min(uptime_end, n_uptime_end) - max(uptime_start, n_uptime_start)
             # print(f"With node {n_node_num}: {n_uptime_start}s/{n_uptime_end}s, res: {res} {res > 0}")
-            if res > 0 and topology[node_num][n_node_num] > 0:
+            if overlap_duration > 0:
                 return False
 
     return True

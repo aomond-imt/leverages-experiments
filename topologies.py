@@ -114,24 +114,16 @@ def update_tasks_list(nb_msrmt):
     return aggtor, msrmts
 
 
-def tasks_list_coord(coord_name):
-    tasks_list = {
-        "deploy": deploy_tasks_list,
-        "update": update_tasks_list
-    }
-    return tasks_list[coord_name]
-
-
-def tasks_list_agg_0(coord_name, nb_msrmt):
-    aggtor, msrmts = tasks_list_coord(coord_name)(nb_msrmt)
+def tasks_list_agg_0(nb_msrmt):
+    aggtor, msrmts = update_tasks_list(nb_msrmt)
     return [
         aggtor,
         *msrmts
     ]
 
 
-def tasks_list_agg_middle(coord_name, nb_msrmt):
-    aggtor, msrmts = tasks_list_coord(coord_name)(nb_msrmt)
+def tasks_list_agg_middle(nb_msrmt):
+    aggtor, msrmts = update_tasks_list(nb_msrmt)
     return [
         *msrmts[:nb_msrmt//2],
         aggtor,
@@ -139,8 +131,8 @@ def tasks_list_agg_middle(coord_name, nb_msrmt):
     ]
 
 
-def tasks_list_grid_fav(coord_name, nb_msrmt):
-    aggtor, msrmts = tasks_list_coord(coord_name)(nb_msrmt)
+def tasks_list_grid_fav(nb_msrmt):
+    aggtor, msrmts = update_tasks_list(nb_msrmt)
     nodes_count = nb_msrmt + 1
     line_width = int(nodes_count**.5)
     agg_num = (line_width//2) + line_width * (line_width//2)
