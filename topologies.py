@@ -95,7 +95,7 @@ def deploy_tasks_list(nb_msrmt):
 
 def update_tasks_list(nb_msrmt):
     # Load transitions times
-    with open(f"{os.environ['HOME']}/concerto-d-projects/experiment_files/parameters/transitions_times/transitions_times-1-30-deps12-1.json") as f:
+    with open(f"{os.environ['HOME']}/journal-pdc-experiments/transitions_duration.json") as f:
         tt = json.load(f)["transitions_times"]
 
     # Aggregator
