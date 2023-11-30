@@ -142,3 +142,25 @@ def tasks_list_grid_fav(nb_msrmt):
         aggtor,
         *msrmts[agg_num:]
     ]
+
+
+if __name__ == "__main__":
+    s_9 = star(9, 50)
+    s_16 = star(16, 50)
+    s_25 = star(25, 50)
+
+    r_9 = ring(9, 50)
+    r_16 = ring(16, 50)
+    r_25 = ring(25, 50)
+
+    c_9 = clique(9, 50)
+    c_16 = clique(16, 50)
+    c_25 = clique(25, 50)
+
+    chain_9 = chain(9, 50)
+    chain_16 = chain(16, 50)
+    chain_25 = chain(25, 50)
+
+    g_9 = grid(9, 50)
+    g_16 = grid(16, 50)
+    g_25 = grid(25, 50)
