@@ -111,8 +111,8 @@ def execute(api: Node):
                 code, data = api.receivet("eth0", timeout=timeout)
                 while data is not None and not is_time_up(api, uptime_end) and not is_finished(s):
                     tot_msg_rcv += 1
-                    api.log(f"Add to buffer: {data}")
                     if data not in buf:
+                        api.log(f"Add to buffer: {data}")
                         buf.append(data)
                     code, data = api.receivet("eth0", timeout=timeout)
 
@@ -137,7 +137,7 @@ def execute(api: Node):
                 api.wait(min(FREQ_POLLING, remaining_time(api, uptime_end)))
 
         tot_uptimes += 1
-        tot_uptimes_duration += c(api) - uptime  # TODO: check value
+        tot_uptimes_duration += c(api) - uptime
 
         if is_finished(s):
             api.log("All nodes finished, terminating")
