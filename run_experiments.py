@@ -1,3 +1,4 @@
+import contextlib
 import json
 import math
 import os
@@ -33,10 +34,7 @@ def run_simulation(test_expe, sweeper):
         root_results_dir = f"{os.environ['HOME']}/results-reconfiguration-esds/topologies/{['paper', 'tests'][test_expe]}"
         results_dir = f"{parameters['tplgy_name']}-{parameters['rn_type']}-{parameters['nodes_count']}/{parameters['id_run']}"
         expe_results_dir = f"{root_results_dir}/{results_dir}"
-        debug_file_dir = f"{shared_methods.TMP_DIR}/{results_dir}"
         os.makedirs(expe_results_dir, exist_ok=True)
-        os.makedirs(debug_file_dir, exist_ok=True)
-        debug_file_path = f"{debug_file_dir}/debug.txt"
 
         try:
             # Setup parameters
@@ -69,9 +67,8 @@ def run_simulation(test_expe, sweeper):
             start_time = time.perf_counter()
             for node_num in range(nodes_count):
                 smltr.create_node("on_pull", interfaces=["eth0"], args=node_arguments)
-            with open(debug_file_path, "w") as f:
-                with redirect_stdout(f):
-                    smltr.run(interferences=False)
+            with contextlib.redirect_stdout(None):
+                smltr.run(interferences=False)
             node_arguments["s"].close()
             try:
                 node_arguments["s"].unlink()
@@ -96,14 +93,11 @@ def run_simulation(test_expe, sweeper):
             traceback.print_exc()
             sweeper.skip(parameters)
         finally:
-            if exists(debug_file_path):
-                shutil.copy(debug_file_path, expe_results_dir)
-                os.remove(debug_file_path)
             parameters = sweeper.get_next()
 
 
 def main():
-    test_expe = False
+    test_expe = True
     if test_expe:
         print("Testing")
     else:
