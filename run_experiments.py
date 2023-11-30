@@ -31,7 +31,7 @@ def run_simulation(test_expe, sweeper):
     parameters = sweeper.get_next()
     while parameters is not None:
         root_results_dir = f"{os.environ['HOME']}/results-reconfiguration-esds/topologies/{['paper', 'tests'][test_expe]}"
-        results_dir = f"{parameters['tplgy_name']}-{parameters['nodes_count']}/{parameters['id_run']}"
+        results_dir = f"{parameters['tplgy_name']}-{parameters['rn_type']}-{parameters['nodes_count']}/{parameters['id_run']}"
         expe_results_dir = f"{root_results_dir}/{results_dir}"
         debug_file_dir = f"{shared_methods.TMP_DIR}/{results_dir}"
         os.makedirs(expe_results_dir, exist_ok=True)
@@ -139,7 +139,7 @@ def main():
         persistence_dir=persistence_dir, sweeps=sweeps, save_sweeps=True
     )
 
-    nb_cores = math.ceil(cpu_count() * 0.5)
+    nb_cores = math.ceil(cpu_count() * 0.8)
     processes = []
     for _ in range(nb_cores):
         p = Process(target=run_simulation, args=(test_expe, sweeper))
