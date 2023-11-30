@@ -1,38 +1,37 @@
 expected_result:
   0:
-    global_termination_time: 240.51
-    local_termination_time: 68.21
+    global_termination_time: 360
+    local_termination_time: 40.21
     finished_reconf: true
     tot_reconf_duration: 18.21
-    tot_uptimes_duration: 70.51
+    tot_uptimes_duration: 120
   1:
-    global_termination_time: 240.51
-    local_termination_time: 52.65
+    global_termination_time: 330
+    local_termination_time: 64.65
     finished_reconf: true
     tot_reconf_duration: 22.65
-    tot_uptimes_duration: 100.51
+    tot_uptimes_duration: 120
   2:
-    global_termination_time: 240.51
-    local_termination_time: 240.51
+    global_termination_time: 363.51
+    local_termination_time: 363.51
     finished_reconf: true
-    tot_reconf_duration: 37.41
-    tot_uptimes_duration: 100.51
+    tot_reconf_duration: 21.23
+    tot_uptimes_duration: 73.51
   3:
-    global_termination_time: 240.51
-    local_termination_time: 52.65
+    global_termination_time: 330
+    local_termination_time: 46.81
     finished_reconf: true
-    tot_reconf_duration: 22.65
-    tot_uptimes_duration: 100.51
+    tot_reconf_duration: 4.81
+    tot_uptimes_duration: 120
   4:
-    global_termination_time: 240.51
-    local_termination_time: 52.65
+    global_termination_time: 330
+    local_termination_time: 46.39
     finished_reconf: true
-    tot_reconf_duration: 22.65
-    tot_uptimes_duration: 100.51
+    tot_reconf_duration: 4.39
+    tot_uptimes_duration: 120
   5:
-    global_termination_time: 240.51
-    local_termination_time: 52.65
+    global_termination_time: 330
+    local_termination_time: 45.05
     finished_reconf: true
-    tot_reconf_duration: 22.65
-    tot_uptimes_duration: 100.51
-
+    tot_reconf_duration: 3.05
+    tot_uptimes_duration: 120

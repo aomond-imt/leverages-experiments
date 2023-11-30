@@ -120,6 +120,8 @@ def main():
             "grid-nonfav",
             "grid-fav",
         ],
+        "rn_type": ["no_rn"],
+        #"rn_type": ["no_rn", "rn_agg", "rn_not_agg"],
         "nodes_count": [9, 16, 25],
         "id_run": [*range(30)],
     }
