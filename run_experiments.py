@@ -131,8 +131,8 @@ def main():
         ],
         # "rn_type": ["no_rn"],
         "rn_type": ["no_rn", "rn_agg", "rn_not_agg"],
-        "nodes_count": [9],
-        "id_run": [*range(10)],
+        "nodes_count": [9, 16, 25],
+        "id_run": [*range(30)],
     }
 
     # Create parameters list/sweeper
