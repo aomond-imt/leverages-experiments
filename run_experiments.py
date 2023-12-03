@@ -112,7 +112,7 @@ def run_simulation(test_expe, sweeper):
 
 
 def main():
-    test_expe = True
+    test_expe = False
     if test_expe:
         print("Testing")
     else:
