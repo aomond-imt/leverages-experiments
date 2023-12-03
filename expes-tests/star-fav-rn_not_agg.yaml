@@ -1,0 +1,37 @@
+expected_result:
+  0:  # Aggregator
+    global_termination_time: 247.88
+    local_termination_time: 247.88
+    finished_reconf: true
+    tot_reconf_duration: 21.23
+    tot_uptimes_duration: 47.88
+  1:
+    global_termination_time: 240
+    local_termination_time: 230.93
+    finished_reconf: true
+    tot_reconf_duration: 18.21
+    tot_uptimes_duration: 60
+  2:  # RN
+    global_termination_time: 247.88
+    local_termination_time: 235.37
+    finished_reconf: true
+    tot_reconf_duration: 22.65
+    tot_uptimes_duration: 107.88
+  3:
+    global_termination_time: 230
+    local_termination_time: 217.53
+    finished_reconf: true
+    tot_reconf_duration: 4.81
+    tot_uptimes_duration: 60
+  4:
+    global_termination_time: 247.88
+    local_termination_time: 226.39
+    finished_reconf: true
+    tot_reconf_duration: 4.39
+    tot_uptimes_duration: 27.88
+  5:
+    global_termination_time: 247.88
+    local_termination_time: 215.05
+    finished_reconf: true
+    tot_reconf_duration: 3.05
+    tot_uptimes_duration: 37.88

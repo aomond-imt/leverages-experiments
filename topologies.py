@@ -118,7 +118,8 @@ def update_tasks_list(nb_msrmt):
 def tasks_list_agg_0(nb_msrmt):
     aggtor, msrmts = update_tasks_list(nb_msrmt)
     agg_num = 0
-    return agg_num, [
+    rn_num = nb_msrmt//2
+    return agg_num, rn_num, [
         aggtor,
         *msrmts
     ]
@@ -127,7 +128,8 @@ def tasks_list_agg_0(nb_msrmt):
 def tasks_list_agg_middle(nb_msrmt):
     aggtor, msrmts = update_tasks_list(nb_msrmt)
     agg_num = nb_msrmt//2
-    return agg_num, [
+    rn_num = 0
+    return agg_num, rn_num, [
         *msrmts[:agg_num],
         aggtor,
         *msrmts[agg_num:]
@@ -139,10 +141,23 @@ def tasks_list_grid_fav(nb_msrmt):
     nodes_count = nb_msrmt + 1
     line_width = int(nodes_count**.5)
     agg_num = (line_width//2) + line_width * (line_width//2)
-    return agg_num, [
+    rn_num = 0
+    return agg_num, rn_num, [
         *msrmts[:agg_num],
         aggtor,
         *msrmts[agg_num:]
+    ]
+
+
+def tasks_list_grid_nonfav(nb_msrmt):
+    aggtor, msrmts = update_tasks_list(nb_msrmt)
+    agg_num = 0
+    nodes_count = nb_msrmt + 1
+    line_width = int(nodes_count ** .5)
+    rn_num = (line_width // 2) + line_width * (line_width // 2)
+    return agg_num, rn_num, [
+        aggtor,
+        *msrmts
     ]
 
 
@@ -166,3 +181,20 @@ if __name__ == "__main__":
     g_9 = grid(9, 50)
     g_16 = grid(16, 50)
     g_25 = grid(25, 50)
+
+    a = tasks_list_grid_nonfav(8)
+    b = tasks_list_grid_nonfav(15)
+    c = tasks_list_grid_nonfav(24)
+
+    d = tasks_list_grid_fav(8)
+    e = tasks_list_grid_fav(15)
+    f = tasks_list_grid_fav(24)
+
+    A = tasks_list_agg_0(8)
+    B = tasks_list_agg_0(15)
+    C = tasks_list_agg_0(24)
+
+    D = tasks_list_agg_middle(8)
+    E = tasks_list_agg_middle(15)
+    F = tasks_list_agg_middle(24)
+    print()

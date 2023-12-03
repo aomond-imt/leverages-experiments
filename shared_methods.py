@@ -19,6 +19,9 @@ def is_isolated_uptime(node_num, hour_num, all_uptime_schedules, nodes_count, to
     Optimization method for simulation
     :return: True if an uptime never overlap with a neighbor during the hour
     """
+    if node_num == rn_num:
+        return False
+
     uptime_start = all_uptime_schedules[node_num][hour_num]
     uptime_end = uptime_start + UPT_DURATION
     # print(f"-- node {node_num}, {hour_num} round, {uptime_start}s/{uptime_end}s --")
