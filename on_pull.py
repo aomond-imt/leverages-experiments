@@ -35,8 +35,10 @@ def execute(api: Node):
     deps_retrieved = {None}
     local_termination = 0
     # Duty-cycle simulation
-    for uptime in uptimes_schedule:
+    upt_num = 0
+    while upt_num < len(uptimes_schedule):
         # Sleeping period
+        uptime = uptimes_schedule[upt_num]
         node_cons.set_power(0)
         api.turn_off()
         sleeping_duration = uptime - c(api)
@@ -48,6 +50,10 @@ def execute(api: Node):
         api.turn_on()
         node_cons.set_power(IDLE_CONSO)
         uptime_end = uptime + UPT_DURATION
+        # Handle RN's uptimes overlaps
+        while upt_num+1 < len(uptimes_schedule) and uptime_end >= uptimes_schedule[upt_num+1]:
+            uptime_end += UPT_DURATION - (uptime_end - uptimes_schedule[upt_num+1])  # Shift uptime_end
+            upt_num += 1
 
         # Coordination loop
         while not is_time_up(api, uptime_end) and not is_finished(s):
@@ -87,7 +93,7 @@ def execute(api: Node):
                         api.log(f"Next parallel tasks: {current_parallel_tasks}")
                         api.log(f"deps_to_retrieve: {deps_to_retrieve}")
 
-            if is_isolated_uptime(api.node_id, tot_uptimes, api.args['all_uptimes_schedules'], nodes_count, topology) and not is_finished(s) and not is_time_up(api, uptime_end):
+            if is_isolated_uptime(api.node_id, tot_uptimes, api.args['all_uptimes_schedules'], nodes_count, topology, api.args['rn_num']) and not is_finished(s) and not is_time_up(api, uptime_end):
                 remaining_t = remaining_time(api, uptime_end)
                 api.wait(remaining_t)
                 th_aggregated_send = remaining_t / ((257 / 6250) + 0.01 + FREQ_POLLING)
@@ -138,6 +144,7 @@ def execute(api: Node):
 
         tot_uptimes += 1
         tot_uptimes_duration += c(api) - uptime
+        upt_num += 1
 
         if is_finished(s):
             api.log("All nodes finished, terminating")

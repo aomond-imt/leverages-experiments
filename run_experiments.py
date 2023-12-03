@@ -2,9 +2,7 @@ import contextlib
 import json
 import math
 import os
-import shutil
 import traceback
-from contextlib import redirect_stdout
 from multiprocessing import cpu_count, shared_memory, Process
 import time
 from os.path import exists
@@ -28,6 +26,14 @@ tasks_list_tplgy = {
 }
 
 
+def _update_schedules_with_rn(rn_num, all_uptimes_schedules, B):
+    rn_scheds = []
+    for n_num, edge_bw in enumerate(B[rn_num]):
+        if edge_bw > 0:
+            rn_scheds.extend(all_uptimes_schedules[n_num])
+    all_uptimes_schedules[rn_num] = sorted(rn_scheds)
+
+
 def run_simulation(test_expe, sweeper):
     parameters = sweeper.get_next()
     while parameters is not None:
@@ -39,7 +45,7 @@ def run_simulation(test_expe, sweeper):
         try:
             # Setup parameters
             nodes_count = parameters["nodes_count"]
-            tasks_list, tplgy_func = tasks_list_tplgy[parameters["tplgy_name"]]
+            tasks_list_func, tplgy_func = tasks_list_tplgy[parameters["tplgy_name"]]
             B, L = tplgy_func(nodes_count, shared_methods.BANDWIDTH)
             smltr = esds.Simulator({"eth0": {"bandwidth": B, "latency": L, "is_wired": False}})
 
@@ -53,11 +59,19 @@ def run_simulation(test_expe, sweeper):
 
             with open(uptimes_schedule_name) as f:
                 all_uptimes_schedules = json.load(f)  # Get complete view of uptimes schedules for aggregated_send optimization
+
+            # Uptime schedules with RN
+            agg_num, tasks_list = tasks_list_func(nodes_count - 1)
+            rn_num = -1
+            if parameters["rn_type"] in ["rn_agg"]:
+                rn_num = agg_num
+                _update_schedules_with_rn(rn_num, all_uptimes_schedules, B)
+
             node_arguments = {
                 "results_dir": expe_results_dir,
                 "nodes_count": nodes_count,
                 "all_uptimes_schedules": all_uptimes_schedules,
-                "tasks_list": tasks_list(nodes_count - 1),
+                "tasks_list": tasks_list,
                 "topology": B,
                 "s": shared_memory.SharedMemory(f"shm_cps_{time.time_ns()}", create=True, size=nodes_count)
             }
@@ -66,7 +80,7 @@ def run_simulation(test_expe, sweeper):
             print(f"Starting {parameters}")
             start_time = time.perf_counter()
             for node_num in range(nodes_count):
-                smltr.create_node("on_pull", interfaces=["eth0"], args=node_arguments)
+                smltr.create_node("on_pull", interfaces=["eth0"], args={**node_arguments, **{"rn_num": rn_num}})
             with contextlib.redirect_stdout(None):
                 smltr.run(interferences=False)
             node_arguments["s"].close()
@@ -126,7 +140,7 @@ def main():
         sweeps = sweep(parameter_list)
     else:
         persistence_dir = f"{shared_methods.TMP_DIR}/test-{int(time.time())}"
-        sweeps = sweep({"tplgy_name": parameter_list["tplgy_name"], "rn_type": ["no_rn"], "nodes_count": [6], "id_run": [0]})
+        sweeps = sweep({"tplgy_name": parameter_list["tplgy_name"], "rn_type": ["no_rn", "rn_agg"], "nodes_count": [6], "id_run": [0]})
 
     # Sweeper read/write is thread-safe even on NFS (https://mimbert.gitlabpages.inria.fr/execo/execo_engine.html?highlight=paramsweeper#execo_engine.sweep.ParamSweeper)
     sweeper = ParamSweeper(
@@ -145,3 +159,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # _, tplgy_func = tasks_list_tplgy["star-fav"]
+    # B, L = tplgy_func(9, shared_methods.BANDWIDTH)
+    # uptimes_schedule_name = f"uptimes_schedules/0-60.json"
+    # with open(uptimes_schedule_name) as f:
+    #     ons_uptimes_schedules = json.load(f)  # Get complete view of uptimes schedules for aggregated_send optimization
+    # _update_schedules_with_rn(1, ons_uptimes_schedules, B)

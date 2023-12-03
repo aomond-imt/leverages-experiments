@@ -117,7 +117,8 @@ def update_tasks_list(nb_msrmt):
 
 def tasks_list_agg_0(nb_msrmt):
     aggtor, msrmts = update_tasks_list(nb_msrmt)
-    return [
+    agg_num = 0
+    return agg_num, [
         aggtor,
         *msrmts
     ]
@@ -125,10 +126,11 @@ def tasks_list_agg_0(nb_msrmt):
 
 def tasks_list_agg_middle(nb_msrmt):
     aggtor, msrmts = update_tasks_list(nb_msrmt)
-    return [
-        *msrmts[:nb_msrmt//2],
+    agg_num = nb_msrmt//2
+    return agg_num, [
+        *msrmts[:agg_num],
         aggtor,
-        *msrmts[nb_msrmt//2:]
+        *msrmts[agg_num:]
     ]
 
 
@@ -137,7 +139,7 @@ def tasks_list_grid_fav(nb_msrmt):
     nodes_count = nb_msrmt + 1
     line_width = int(nodes_count**.5)
     agg_num = (line_width//2) + line_width * (line_width//2)
-    return [
+    return agg_num, [
         *msrmts[:agg_num],
         aggtor,
         *msrmts[agg_num:]
