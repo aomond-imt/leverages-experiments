@@ -129,10 +129,10 @@ def main():
             "grid-nonfav",
             "grid-fav",
         ],
-        "rn_type": ["no_rn"],
-        #"rn_type": ["no_rn", "rn_agg", "rn_not_agg"],
-        "nodes_count": [9, 16, 25],
-        "id_run": [*range(30)],
+        # "rn_type": ["no_rn"],
+        "rn_type": ["no_rn", "rn_agg", "rn_not_agg"],
+        "nodes_count": [9],
+        "id_run": [*range(10)],
     }
 
     # Create parameters list/sweeper
@@ -141,7 +141,7 @@ def main():
         sweeps = sweep(parameter_list)
     else:
         persistence_dir = f"{shared_methods.TMP_DIR}/test-{int(time.time())}"
-        sweeps = sweep({"tplgy_name": parameter_list["tplgy_name"], "rn_type": ["no_rn", "rn_not_agg"], "nodes_count": [6], "id_run": [0]})
+        sweeps = sweep({"tplgy_name": parameter_list["tplgy_name"], "rn_type": ["no_rn", "rn_agg", "rn_not_agg"], "nodes_count": [6], "id_run": [0]})
 
     # Sweeper read/write is thread-safe even on NFS (https://mimbert.gitlabpages.inria.fr/execo/execo_engine.html?highlight=paramsweeper#execo_engine.sweep.ParamSweeper)
     sweeper = ParamSweeper(
