@@ -139,7 +139,7 @@ def tree(nodes_count, bw):
 
         cpt -= 1
 
-    return B, L
+    return np.asarray(B), L
 
 
 def starchain(nodes_count, bw):

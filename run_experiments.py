@@ -14,7 +14,7 @@ from execo_engine import ParamSweeper, sweep
 import shared_methods
 from topologies import clique, chain, ring, star, grid, tasks_list_agg_0, tasks_list_grid_fav, tasks_list_agg_middle, \
     tasks_list_grid_nonfav, tree, tasks_list_tree_fav, tasks_list_tree_nonfav, tasks_list_starchain_fav, \
-    tasks_list_starchain_nonfav
+    tasks_list_starchain_nonfav, starchain
 
 tasks_list_tplgy = {
     "star-fav": (tasks_list_agg_0, star),
@@ -27,8 +27,8 @@ tasks_list_tplgy = {
     "grid-nonfav": (tasks_list_grid_nonfav, grid),
     "tree-fav": (tasks_list_tree_fav, tree),
     "tree-nonfav": (tasks_list_tree_nonfav, tree),
-    "starchain-fav": (tasks_list_starchain_fav, tree),
-    "starchain-nonfav": (tasks_list_starchain_nonfav, tree),
+    "starchain-fav": (tasks_list_starchain_fav, starchain),
+    "starchain-nonfav": (tasks_list_starchain_nonfav, starchain),
 }
 
 
