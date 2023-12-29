@@ -1,5 +1,5 @@
 from shared_methods import is_isolated_uptime, BANDWIDTH
-from topologies import star, chain, clique, ring, grid, tree
+from topologies import star, chain, clique, ring, grid, tree, starchain
 
 
 def test_is_isolated_uptime():
@@ -146,6 +146,29 @@ def test_tree_25():
     print("test_tree_25 done")
 
 
+def test_starchain():
+    uptime_schedules_true = [
+        [200], [400], [100], [0], [100], [0], [100], [0], [400]
+    ]
+    uptime_schedules_false_1 = [
+        [0], [100], [100], [100], [100], [100], [100], [100], [100]
+    ]
+    uptime_schedules_false_2 = [
+        [100], [150], [50], [150], [50], [150], [50], [150], [50]
+    ]
+    nodes_count = 9
+    tplgy, _ = starchain(nodes_count, BANDWIDTH)
+    expected_result_true = [True]*9
+    expected_result_false_1 = [True] + [False]*8
+    expected_result_false_2 = [False]*9
+    for node_num in range(nodes_count):
+        assert expected_result_true[node_num] == is_isolated_uptime(node_num, 0, uptime_schedules_true, nodes_count, tplgy, -1)
+        assert expected_result_false_1[node_num] == is_isolated_uptime(node_num, 0, uptime_schedules_false_1, nodes_count, tplgy, -1)
+        assert expected_result_false_2[node_num] == is_isolated_uptime(node_num, 0, uptime_schedules_false_2, nodes_count, tplgy, -1)
+
+    print("test_starchain done")
+
+
 if __name__ == "__main__":
     test_is_isolated_uptime()
     test_star()
@@ -156,3 +179,4 @@ if __name__ == "__main__":
     test_tree_9()
     test_tree_16()
     test_tree_25()
+    test_starchain()

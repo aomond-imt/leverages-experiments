@@ -142,6 +142,14 @@ def tree(nodes_count, bw):
     return B, L
 
 
+def starchain(nodes_count, bw):
+    B, L = chain(nodes_count, bw)
+    for i in range(nodes_count):
+        B[0][i] = bw
+        B[i][0] = bw
+    return B, L
+
+
 def deploy_tasks_list(nb_msrmt):
     # Aggregator
     t_sa = [["t_sa", 1.03, None]]
@@ -272,6 +280,8 @@ def tasks_list_tree_nonfav(nb_msrmt):
 
 
 if __name__ == "__main__":
+    sc_9 = starchain(9, 50)
+
     t_9 = tree(9, 50)
     t_16 = tree(16, 50)
     t_25 = tree(25, 50)
