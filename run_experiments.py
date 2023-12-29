@@ -68,6 +68,8 @@ def run_simulation(test_expe, sweeper):
                 if parameters["rn_type"] == "rn_agg":
                     rn_num = agg_num
                 _update_schedules_with_rn(rn_num, all_uptimes_schedules, B)
+            if parameters["rn_type"] == "no_rn":
+                rn_num = -1
 
             node_arguments = {
                 "results_dir": expe_results_dir,
