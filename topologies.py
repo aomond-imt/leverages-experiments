@@ -279,6 +279,27 @@ def tasks_list_tree_nonfav(nb_msrmt):
     ]
 
 
+def tasks_list_starchain_fav(nb_msrmt):
+    aggtor, msrmts = update_tasks_list(nb_msrmt)
+    rn_num = 1
+    agg_num = 0
+    return agg_num, rn_num, [
+        aggtor,
+        *msrmts
+    ]
+
+
+def tasks_list_starchain_nonfav(nb_msrmt):
+    aggtor, msrmts = update_tasks_list(nb_msrmt)
+    rn_num = 0
+    agg_num = 1
+    return agg_num, rn_num, [
+        *msrmts[:agg_num],
+        aggtor,
+        *msrmts[agg_num:]
+    ]
+
+
 if __name__ == "__main__":
     sc_9 = starchain(9, 50)
 
