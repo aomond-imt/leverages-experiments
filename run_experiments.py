@@ -18,10 +18,10 @@ from topologies import clique, chain, ring, star, grid, tasks_list_agg_0, tasks_
 tasks_list_tplgy = {
     "star-fav": (tasks_list_agg_0, star),
     "star-nonfav": (tasks_list_agg_middle, star),
+    "clique-fav": (tasks_list_agg_0, clique),
     "ring-fav": (tasks_list_agg_0, ring),
     "chain-fav": (tasks_list_agg_middle, chain),
     "chain-nonfav": (tasks_list_agg_0, chain),
-    "clique-fav": (tasks_list_agg_0, clique),
     "grid-fav": (tasks_list_grid_fav, grid),
     "grid-nonfav": (tasks_list_grid_nonfav, grid),
 }
