@@ -135,6 +135,10 @@ def main():
             "clique-fav",
             "grid-nonfav",
             "grid-fav",
+            "tree-fav",
+            "tree-nonfav",
+            "starchain-fav",
+            "starchain-nonfav"
         ],
         # "rn_type": ["no_rn"],
         "rn_type": ["no_rn", "rn_agg", "rn_not_agg"],
