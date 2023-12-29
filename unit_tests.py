@@ -1,5 +1,5 @@
 from shared_methods import is_isolated_uptime, BANDWIDTH
-from topologies import star, chain, clique, ring, grid
+from topologies import star, chain, clique, ring, grid, tree
 
 
 def test_is_isolated_uptime():
@@ -95,6 +95,57 @@ def test_clique():
     print("test_clique done")
 
 
+def test_tree_9():
+    uptime_schedules_true = [
+        [400], [200], [200], [300], [300], [300], [300], [400], [400]
+    ]
+    nodes_count = 9
+    tplgy, _ = tree(nodes_count, BANDWIDTH)
+    expected_result_true = [True]*9
+    for node_num in range(nodes_count):
+        assert expected_result_true[node_num] == is_isolated_uptime(node_num, 0, uptime_schedules_true, nodes_count, tplgy, -1)
+
+    uptime_schedules_false = [
+        [400], [400], [200], [800], [800], [200], [100], [800], [100]
+    ]
+    expected_result_false = [False]*4+[True]+[False]*4
+    for node_num in range(nodes_count):
+        assert expected_result_false[node_num] == is_isolated_uptime(node_num, 0, uptime_schedules_false, nodes_count, tplgy, -1)
+    print("test_tree_9 done")
+
+
+def test_tree_16():
+    uptime_schedules_true = [
+        [400], [200], [200], [300], [300], [300], [300], [400], [400], [400], [400], [400], [400], [400], [450], [500]
+    ]
+    nodes_count = 16
+    tplgy, _ = tree(nodes_count, BANDWIDTH)
+    expected_result_true = [True]*16
+    for node_num in range(nodes_count):
+        assert expected_result_true[node_num] == is_isolated_uptime(node_num, 0, uptime_schedules_true, nodes_count, tplgy, -1)
+
+    uptime_schedules_false = [
+        [100], [50], [150], [50], [0], [200], [150], [50], [200], [0], [0], [200], [200], [200], [150], [50]
+    ]
+    expected_result_false = [False]*8 + [True] + [False]*7
+    for node_num in range(nodes_count):
+        assert expected_result_false[node_num] == is_isolated_uptime(node_num, 0, uptime_schedules_false, nodes_count, tplgy, -1)
+    print("test_tree_16 done")
+
+
+def test_tree_25():
+    uptime_schedules_true = [
+        [400], [200], [200], [300], [300], [300], [300], [400], [400], [400], [400], [400], [450], [450], [450], [500], [500], [500], [500], [500], [500], [500], [500], [500], [500]
+    ]
+    nodes_count = 25
+    tplgy, _ = tree(nodes_count, BANDWIDTH)
+    expected_result_true = [True]*25
+    for node_num in range(nodes_count):
+        assert expected_result_true[node_num] == is_isolated_uptime(node_num, 0, uptime_schedules_true, nodes_count, tplgy, -1)
+
+    print("test_tree_25 done")
+
+
 if __name__ == "__main__":
     test_is_isolated_uptime()
     test_star()
@@ -102,3 +153,6 @@ if __name__ == "__main__":
     test_grid()
     test_ring()
     test_clique()
+    test_tree_9()
+    test_tree_16()
+    test_tree_25()
