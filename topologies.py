@@ -234,6 +234,43 @@ def tasks_list_grid_nonfav(nb_msrmt):
     ]
 
 
+def tasks_list_tree_fav(nb_msrmt):
+    aggtor, msrmts = update_tasks_list(nb_msrmt)
+    agg_num = 0
+    rn_num = None
+    if nb_msrmt == 8:
+        rn_num = 8
+    if nb_msrmt == 15:
+        rn_num = 15
+    if nb_msrmt == 24:
+        rn_num = 15
+    if rn_num is None:
+        raise Exception("rn_num cannot be None")
+    return agg_num, rn_num, [
+        aggtor,
+        *msrmts
+    ]
+
+
+def tasks_list_tree_nonfav(nb_msrmt):
+    aggtor, msrmts = update_tasks_list(nb_msrmt)
+    rn_num = 0
+    agg_num = None
+    if nb_msrmt == 8:
+        agg_num = 8
+    if nb_msrmt == 15:
+        agg_num = 15
+    if nb_msrmt == 24:
+        agg_num = 15
+    if agg_num is None:
+        raise Exception("agg_num cannot be None")
+    return agg_num, rn_num, [
+        *msrmts[:agg_num],
+        aggtor,
+        *msrmts[agg_num:]
+    ]
+
+
 if __name__ == "__main__":
     t_9 = tree(9, 50)
     t_16 = tree(16, 50)
