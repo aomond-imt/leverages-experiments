@@ -118,7 +118,7 @@ def execute(api: Node):
                 while data is not None and not is_time_up(api, uptime_end) and not is_finished(s):
                     tot_msg_rcv += 1
                     if data not in buf:
-                        api.log(f"Add to buffer: {data}")
+                        # api.log(f"Add to buffer: {data}")
                         buf.append(data)
                     code, data = api.receivet("eth0", timeout=timeout)
 
