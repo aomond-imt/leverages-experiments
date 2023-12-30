@@ -140,10 +140,9 @@ def main():
             "starchain-fav",
             "starchain-nonfav"
         ],
-        # "rn_type": ["no_rn"],
         "rn_type": ["no_rn", "rn_agg", "rn_not_agg"],
         "nodes_count": [9, 16, 25],
-        "id_run": [*range(30)],
+        "id_run": [*range(200)],
     }
 
     # Create parameters list/sweeper
@@ -159,7 +158,7 @@ def main():
         persistence_dir=persistence_dir, sweeps=sweeps, save_sweeps=True
     )
 
-    nb_cores = math.ceil(cpu_count() * 0.8)
+    nb_cores = int(cpu_count() * 0.7)
     processes = []
     for _ in range(nb_cores):
         p = Process(target=run_simulation, args=(test_expe, sweeper))
