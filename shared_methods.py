@@ -2,8 +2,6 @@ import os
 
 import yaml
 
-HOME_DIR = os.environ['HOME']
-TMP_DIR = "/tmp"
 INTERFACE_NAME = "eth0"
 IDLE_CONSO = 1.339
 STRESS_CONSO = 2.697

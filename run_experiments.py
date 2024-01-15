@@ -41,10 +41,10 @@ def _update_schedules_with_rn(rn_num, all_uptimes_schedules, B):
     all_uptimes_schedules[rn_num] = sorted(rn_scheds)
 
 
-def run_simulation(test_expe, sweeper):
+def run_simulation(expe_dir, test_expe, sweeper):
     parameters = sweeper.get_next()
     while parameters is not None:
-        root_results_dir = f"{shared_methods.HOME_DIR}/results-reconfiguration-esds/topologies/{['paper', 'tests'][test_expe]}"
+        root_results_dir = f"{expe_dir}/results-reconfiguration-esds/topologies/{['paper', 'tests'][test_expe]}"
         results_dir = f"{parameters['tplgy_name']}-{parameters['rn_type']}-{parameters['nodes_count']}/{parameters['id_run']}"
         expe_results_dir = f"{root_results_dir}/{results_dir}"
         os.makedirs(expe_results_dir, exist_ok=True)
@@ -127,8 +127,7 @@ def main():
     with open(sys.argv[1]) as f:
         expe_parameters = yaml.safe_load(f)
 
-    test_expe, tplgy_name, rn_type, nodes_count, id_run_boundaries = expe_parameters
-    test_expe = test_expe == "True"
+    test_expe, tmp_dir, expe_dir = expe_parameters["test_expe"] == "True", expe_parameters["tmp_dir"], expe_parameters["expe_dir"]
     if test_expe:
         print("Testing")
     else:
@@ -143,10 +142,10 @@ def main():
     }
     # Create parameters list/sweeper
     if not test_expe:
-        persistence_dir = f"{shared_methods.HOME_DIR}/esds-sweeper"
+        persistence_dir = f"{expe_dir}/esds-sweeper"
         sweeps = sweep(expe_parameters_sweep)
     else:
-        persistence_dir = f"{shared_methods.TMP_DIR}/test-{int(time.time())}"
+        persistence_dir = f"{tmp_dir}/test-{int(time.time())}"
         sweeps = sweep({"tplgy_name": expe_parameters_sweep["tplgy_name"], "rn_type": ["no_rn", "rn_agg", "rn_not_agg"], "nodes_count": [6], "id_run": [0]})
 
     # Sweeper read/write is thread-safe even on NFS (https://mimbert.gitlabpages.inria.fr/execo/execo_engine.html?highlight=paramsweeper#execo_engine.sweep.ParamSweeper)
@@ -157,7 +156,7 @@ def main():
     nb_cores = int(cpu_count() * 0.7)
     processes = []
     for _ in range(nb_cores):
-        p = Process(target=run_simulation, args=(test_expe, sweeper))
+        p = Process(target=run_simulation, args=(expe_dir, test_expe, sweeper))
         p.start()
         processes.append(p)
     for p in processes:
