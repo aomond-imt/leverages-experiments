@@ -4,3 +4,4 @@ venv/
 divers/
 expe_parameters*.yaml
 !expe_parameters_example.yaml
+!expe_parameters_journal.yaml

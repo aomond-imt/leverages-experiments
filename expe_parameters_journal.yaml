@@ -1,0 +1,25 @@
+test_expe: False
+tplgy_name:
+  - "star-fav"
+  - "star-nonfav"
+  - "ring-fav"
+  - "chain-fav"
+  - "chain-nonfav"
+  - "clique-fav"
+  - "grid-nonfav"
+  - "grid-fav"
+  - "tree-fav"
+  - "tree-nonfav"
+  - "starchain-fav"
+  - "starchain-nonfav"
+rn_type:
+  - "no_rn"
+  - "rn_agg"
+  - "rn_not_agg"
+nodes_count:
+  - 9
+  - 16
+  - 25
+id_run_boundaries:
+  min: 0
+  max: 200
