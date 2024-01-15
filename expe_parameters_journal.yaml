@@ -1,4 +1,4 @@
-expe_dir: "/home/user"
+expe_dir: "/path/to/dir"
 test_expe: False
 
 # Simulation parameters
