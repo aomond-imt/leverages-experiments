@@ -2,6 +2,7 @@ import contextlib
 import json
 import math
 import os
+import sys
 import traceback
 from multiprocessing import cpu_count, shared_memory, Process
 import time
@@ -119,39 +120,34 @@ def run_simulation(test_expe, sweeper):
 
 
 def main():
-    test_expe = False
+    if len(sys.argv) < 2:
+        print("Must specify a configuration file")
+        exit(1)
+
+    with open(sys.argv[1]) as f:
+        expe_parameters = yaml.safe_load(f)
+
+    test_expe, tplgy_name, rn_type, nodes_count, id_run_boundaries = expe_parameters
+    test_expe = bool(test_expe)
     if test_expe:
         print("Testing")
     else:
         print("Simulation start")
 
-    parameter_list = {
-        "tplgy_name": [
-            "star-fav",
-            "star-nonfav",
-            "ring-fav",
-            "chain-fav",
-            "chain-nonfav",
-            "clique-fav",
-            "grid-nonfav",
-            "grid-fav",
-            "tree-fav",
-            "tree-nonfav",
-            "starchain-fav",
-            "starchain-nonfav"
-        ],
-        "rn_type": ["no_rn", "rn_agg", "rn_not_agg"],
-        "nodes_count": [9, 16, 25],
-        "id_run": [*range(200)],
+    id_run_min, id_run_max = expe_parameters["id_run_boundaries"].values()
+    expe_parameters_sweep = {
+        "tplgy_name": expe_parameters["tplgy_name"],
+        "rn_type": expe_parameters["rn_type"],
+        "nodes_count": expe_parameters["nodes_count"],
+        "id_run": [*range(id_run_min, id_run_max)],
     }
-
     # Create parameters list/sweeper
     if not test_expe:
         persistence_dir = f"{shared_methods.HOME_DIR}/esds-sweeper"
-        sweeps = sweep(parameter_list)
+        sweeps = sweep(expe_parameters_sweep)
     else:
         persistence_dir = f"{shared_methods.TMP_DIR}/test-{int(time.time())}"
-        sweeps = sweep({"tplgy_name": parameter_list["tplgy_name"], "rn_type": ["no_rn", "rn_agg", "rn_not_agg"], "nodes_count": [6], "id_run": [0]})
+        sweeps = sweep({"tplgy_name": expe_parameters_sweep["tplgy_name"], "rn_type": ["no_rn", "rn_agg", "rn_not_agg"], "nodes_count": [6], "id_run": [0]})
 
     # Sweeper read/write is thread-safe even on NFS (https://mimbert.gitlabpages.inria.fr/execo/execo_engine.html?highlight=paramsweeper#execo_engine.sweep.ParamSweeper)
     sweeper = ParamSweeper(

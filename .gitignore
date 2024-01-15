@@ -2,3 +2,5 @@
 __pycache__/
 venv/
 divers/
+expe_parameters*.yaml
+!expe_parameters_example.yaml
