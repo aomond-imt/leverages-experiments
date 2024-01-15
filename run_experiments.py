@@ -43,7 +43,7 @@ def _update_schedules_with_rn(rn_num, all_uptimes_schedules, B):
 def run_simulation(test_expe, sweeper):
     parameters = sweeper.get_next()
     while parameters is not None:
-        root_results_dir = f"{os.environ['HOME']}/results-reconfiguration-esds/topologies/{['paper', 'tests'][test_expe]}"
+        root_results_dir = f"{shared_methods.HOME_DIR}/results-reconfiguration-esds/topologies/{['paper', 'tests'][test_expe]}"
         results_dir = f"{parameters['tplgy_name']}-{parameters['rn_type']}-{parameters['nodes_count']}/{parameters['id_run']}"
         expe_results_dir = f"{root_results_dir}/{results_dir}"
         os.makedirs(expe_results_dir, exist_ok=True)
@@ -147,7 +147,7 @@ def main():
 
     # Create parameters list/sweeper
     if not test_expe:
-        persistence_dir = f"{shared_methods.HOME_DIR}/optim-esds-sweeper"
+        persistence_dir = f"{shared_methods.HOME_DIR}/esds-sweeper"
         sweeps = sweep(parameter_list)
     else:
         persistence_dir = f"{shared_methods.TMP_DIR}/test-{int(time.time())}"
