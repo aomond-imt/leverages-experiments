@@ -47,7 +47,7 @@ def run_simulation(test_name, tasks_list):
     s = esds.Simulator({"eth0": {"bandwidth": B, "latency": L, "is_wired": False}})
     node_neighbors = compute_neighborhood(B)
     nodes_count = len(tasks_list.keys())
-    with open(f"tplgy-tests/{test_name}.json") as f:
+    with open(f"tests/tplgy-tests/{test_name}.json") as f:
         all_uptimes_schedules = json.load(f)
     arguments = {
         "results_dir": f"/tmp/{test_name}",
@@ -68,7 +68,7 @@ def run_simulation(test_name, tasks_list):
 
 
 def run_test(test_name):
-    with open(f"tplgy-tests/{test_name}.yaml") as f:
+    with open(f"tests/tplgy-tests/{test_name}.yaml") as f:
         test_args = yaml.safe_load(f)
 
     tasks_list, expected_result = test_args["tasks_list"], test_args["expected_result"]

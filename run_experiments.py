@@ -52,7 +52,7 @@ def run_simulation(test_expe, sweeper):
             if not test_expe:
                 uptimes_schedule_name = f"uptimes_schedules/{parameters['id_run']}-{shared_methods.UPT_DURATION}.json"
             else:
-                uptimes_schedule_name = f"expes-tests/{parameters['tplgy_name']}-{parameters['rn_type']}.json"
+                uptimes_schedule_name = f"tests/expes-tests/{parameters['tplgy_name']}-{parameters['rn_type']}.json"
                 if not exists(uptimes_schedule_name):
                     print(f"No test found for {parameters['tplgy_name']}")
                     continue
@@ -99,7 +99,7 @@ def run_simulation(test_expe, sweeper):
 
             # If test, verification
             if test_expe:
-                with open(f"expes-tests/{parameters['tplgy_name']}-{parameters['rn_type']}.yaml") as f:
+                with open(f"tests/expes-tests/{parameters['tplgy_name']}-{parameters['rn_type']}.yaml") as f:
                     expected_results = yaml.safe_load(f)["expected_result"]
                 errors = shared_methods.verify_results(expected_results, expe_results_dir)
                 if len(errors) == 0:
