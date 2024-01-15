@@ -1,4 +1,4 @@
-test_expe: false
+test_expe: False
 tplgy_name:
   - "clique-fav"  # Full connectivity
 rn_type:

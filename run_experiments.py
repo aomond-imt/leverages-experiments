@@ -128,7 +128,7 @@ def main():
         expe_parameters = yaml.safe_load(f)
 
     test_expe, tplgy_name, rn_type, nodes_count, id_run_boundaries = expe_parameters
-    test_expe = bool(test_expe)
+    test_expe = test_expe == "True"
     if test_expe:
         print("Testing")
     else:
