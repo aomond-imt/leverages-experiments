@@ -127,7 +127,7 @@ def main():
     with open(sys.argv[1]) as f:
         expe_parameters = yaml.safe_load(f)
 
-    test_expe, tmp_dir, expe_dir = expe_parameters["test_expe"] == "True", expe_parameters["tmp_dir"], expe_parameters["expe_dir"]
+    test_expe, expe_dir = expe_parameters["test_expe"] == "True", expe_parameters["expe_dir"]
     if test_expe:
         print("Testing")
     else:
@@ -145,7 +145,7 @@ def main():
         persistence_dir = f"{expe_dir}/esds-sweeper"
         sweeps = sweep(expe_parameters_sweep)
     else:
-        persistence_dir = f"{tmp_dir}/test-{int(time.time())}"
+        persistence_dir = f"/tmp/test-{int(time.time())}"
         sweeps = sweep({"tplgy_name": expe_parameters_sweep["tplgy_name"], "rn_type": ["no_rn", "rn_agg", "rn_not_agg"], "nodes_count": [6], "id_run": [0]})
 
     # Sweeper read/write is thread-safe even on NFS (https://mimbert.gitlabpages.inria.fr/execo/execo_engine.html?highlight=paramsweeper#execo_engine.sweep.ParamSweeper)

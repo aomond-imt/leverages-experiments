@@ -1,12 +1,20 @@
-tmp_dir: "/tmp"
 expe_dir: "/home/user"
 test_expe: False
+
+# Simulation parameters
+### Topology - Service distribution (fav: best, nonfav: worst)
 tplgy_name:
   - "clique-fav"  # Full connectivity
+
+### RN position (no_rn: NA, rn_agg: RN hosts aggregation service, rn_not_agg: RN hosts measurement service)
 rn_type:
   - "no_rn"       # Standard scenario (without RN)
+
+### Number of ONs (include 1 aggregation ON)
 nodes_count:
   - 3
+
+### Number of runs
 id_run_boundaries:
   min: 0
   max: 1          # Do one run, with the first uptime schedule (uptimes_schedules/0-60.json)
