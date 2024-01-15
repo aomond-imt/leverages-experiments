@@ -49,12 +49,6 @@ def run_simulation(test_expe, sweeper):
         os.makedirs(expe_results_dir, exist_ok=True)
 
         try:
-            # Setup parameters
-            nodes_count = parameters["nodes_count"]
-            tasks_list_func, tplgy_func = tasks_list_tplgy[parameters["tplgy_name"]]
-            B, L = tplgy_func(nodes_count, shared_methods.BANDWIDTH)
-            smltr = esds.Simulator({"eth0": {"bandwidth": B, "latency": L, "is_wired": False}})
-
             if not test_expe:
                 uptimes_schedule_name = f"uptimes_schedules/{parameters['id_run']}-{shared_methods.UPT_DURATION}.json"
             else:
@@ -62,6 +56,12 @@ def run_simulation(test_expe, sweeper):
                 if not exists(uptimes_schedule_name):
                     print(f"No test found for {parameters['tplgy_name']}")
                     continue
+
+            # Setup parameters
+            nodes_count = parameters["nodes_count"]
+            tasks_list_func, tplgy_func = tasks_list_tplgy[parameters["tplgy_name"]]
+            B, L = tplgy_func(nodes_count, shared_methods.BANDWIDTH)
+            smltr = esds.Simulator({"eth0": {"bandwidth": B, "latency": L, "is_wired": False}})
 
             with open(uptimes_schedule_name) as f:
                 all_uptimes_schedules = json.load(f)  # Get complete view of uptimes schedules for aggregated_send optimization
