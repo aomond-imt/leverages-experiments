@@ -1,11 +1,14 @@
 # Installation
-Tested with `python3.9` and `python3.10` in `ubuntu-22.04`\
 `pip install -r requirements.txt` (preferably in a virtualenv)
+
+# Configuration
+
+Select simulation parameters, copy and modify: `expe_parameters_journal.yaml`.
+Notably, modify `<expe_dir>` which should contains: this repo, the experiments progression, the results.
 
 # Run experiments
 
-Select simulation parameters, copy and modify: `expe_parameters_journal.yaml`
-
+Tested with `python3.9` and `python3.10` in `ubuntu-22.04`\
 Execute `run_experiments.py` with parameter file, example:
 
 `python3 run_experiments.py expe_parameters_example.yaml`
