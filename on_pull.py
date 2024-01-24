@@ -16,7 +16,6 @@ def execute(api: Node):
     :param api:
     :return:
     """
-    api.log(f"Parameters: {api.args}")
     s = api.args["s"]
     node_cons = PowerStates(api, 0)
     comms_cons = PowerStatesComms(api)
@@ -29,6 +28,7 @@ def execute(api: Node):
     results_dir = api.args["results_dir"]
     nodes_count = api.args["nodes_count"]
     topology = api.args["topology"]
+    leverage = api.args["leverage"]
 
     deps_to_retrieve = set(task_dep for _,_,task_dep in current_parallel_tasks)
     api.log(f"deps_to_retrieve: {deps_to_retrieve}")
@@ -57,6 +57,8 @@ def execute(api: Node):
 
         # Coordination loop
         while not is_time_up(api, uptime_end) and not is_finished(s):
+
+            # stress period
             if current_parallel_tasks is not None:
                 tasks_to_do = []
                 for task in current_parallel_tasks:
@@ -93,6 +95,7 @@ def execute(api: Node):
                         api.log(f"Next parallel tasks: {current_parallel_tasks}")
                         api.log(f"deps_to_retrieve: {deps_to_retrieve}")
 
+            # simulation optimization
             if is_isolated_uptime(api.node_id, tot_uptimes, api.args['all_uptimes_schedules'], nodes_count, topology, api.args['rn_num']) and not is_finished(s) and not is_time_up(api, uptime_end):
                 remaining_t = remaining_time(api, uptime_end)
                 api.wait(remaining_t)
@@ -105,39 +108,11 @@ def execute(api: Node):
 
                 # api.log(f"Isolated uptime, simulating {th_aggregated_send} sends")
 
-            # Ask for missing deps
-            if len(deps_to_retrieve) > 0 and not is_time_up(api, uptime_end):
-                api.sendt("eth0", ("req", deps_to_retrieve), 257, 0, timeout=remaining_time(api, uptime_end))
-                tot_msg_sent += 1
-
-            # Receive msgs and put them in buffer (do not put duplicates in buf)
-            buf = []
-            timeout = 0.01
-            if not is_time_up(api, uptime_end) and not is_finished(s):
-                code, data = api.receivet("eth0", timeout=timeout)
-                while data is not None and not is_time_up(api, uptime_end) and not is_finished(s):
-                    tot_msg_rcv += 1
-                    if data not in buf:
-                        # api.log(f"Add to buffer: {data}")
-                        buf.append(data)
-                    code, data = api.receivet("eth0", timeout=timeout)
-
-            # Treat each received msg
-            for data in buf:
-                type_msg, deps = data
-                if type_msg == "req":
-                    deps_to_send = deps_retrieved.intersection(deps)
-                    if len(deps_to_send) > 0:
-                        api.log(f"Sending deps: {deps_to_send}")
-                        api.sendt("eth0", ("res", deps_to_send), 257, 0, timeout=remaining_time(api, uptime_end))
-                        tot_msg_sent += 1
-                    deps_to_retrieve.update(deps.difference(deps_retrieved))
-                if type_msg == "res":
-                    for dep in deps:
-                        if dep in deps_to_retrieve:
-                            api.log(f"Retrieved deps: {dep}")
-                            deps_retrieved.add(dep)
-                            deps_to_retrieve.remove(dep)
+            # communication period
+            if leverage == "pull":
+                tot_msg_rcv, tot_msg_sent = pull(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end)
+            else:
+                tot_msg_rcv, tot_msg_sent = push(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end)
 
             if not is_finished(s):
                 api.wait(min(FREQ_POLLING, remaining_time(api, uptime_end)))
@@ -173,3 +148,71 @@ def execute(api: Node):
             "tot_reconf_duration": tot_reconf_duration,
             "tot_sleeping_duration": tot_sleeping_duration,
         }, f)
+
+
+def pull(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end):
+    # Ask for missing deps
+    if len(deps_to_retrieve) > 0 and not is_time_up(api, uptime_end):
+        api.sendt("eth0", ("req", deps_to_retrieve), 257, 0, timeout=remaining_time(api, uptime_end))
+        tot_msg_sent += 1
+
+    # Receive msgs and put them in buffer (do not put duplicates in buf)
+    buf = []
+    timeout = 0.01
+    if not is_time_up(api, uptime_end) and not is_finished(s):
+        code, data = api.receivet("eth0", timeout=timeout)
+        while data is not None and not is_time_up(api, uptime_end) and not is_finished(s):
+            tot_msg_rcv += 1
+            if data not in buf:
+                # api.log(f"Add to buffer: {data}")
+                buf.append(data)
+            code, data = api.receivet("eth0", timeout=timeout)
+
+    # Treat each received msg
+    for data in buf:
+        type_msg, deps = data
+        if type_msg == "req":
+            deps_to_send = deps_retrieved.intersection(deps)
+            if len(deps_to_send) > 0:
+                api.log(f"Sending deps: {deps_to_send}")
+                api.sendt("eth0", ("res", deps_to_send), 257, 0, timeout=remaining_time(api, uptime_end))
+                tot_msg_sent += 1
+            deps_to_retrieve.update(deps.difference(deps_retrieved))
+        if type_msg == "res":
+            for dep in deps:
+                if dep in deps_to_retrieve:
+                    api.log(f"Retrieved deps: {dep}")
+                    deps_retrieved.add(dep)
+                    deps_to_retrieve.remove(dep)
+
+    return tot_msg_rcv, tot_msg_sent
+
+
+def push(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end):
+    # Ask for missing deps
+    if len(deps_retrieved) > 0 and not is_time_up(api, uptime_end):
+        api.sendt("eth0", deps_retrieved, 257, 0, timeout=remaining_time(api, uptime_end))
+        tot_msg_sent += 1
+
+    # Receive msgs and put them in buffer (do not put duplicates in buf)
+    buf = []
+    timeout = 0.01
+    if not is_time_up(api, uptime_end) and not is_finished(s):
+        code, data = api.receivet("eth0", timeout=timeout)
+        while data is not None and not is_time_up(api, uptime_end) and not is_finished(s):
+            tot_msg_rcv += 1
+            if data not in buf:
+                # api.log(f"Add to buffer: {data}")
+                buf.append(data)
+            code, data = api.receivet("eth0", timeout=timeout)
+
+    # Treat each received msg
+    for data in buf:
+        for dep in data:
+            if dep not in deps_retrieved:
+                api.log(f"Retrieved deps: {dep}")
+                deps_retrieved.add(dep)
+            if dep in deps_to_retrieve:
+                deps_to_retrieve.remove(dep)
+
+    return tot_msg_rcv, tot_msg_sent

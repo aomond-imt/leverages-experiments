@@ -4,6 +4,7 @@ import math
 import os
 import sys
 import traceback
+import argparse
 from multiprocessing import cpu_count, shared_memory, Process
 import time
 from os.path import exists
@@ -41,11 +42,12 @@ def _update_schedules_with_rn(rn_num, all_uptimes_schedules, B):
     all_uptimes_schedules[rn_num] = sorted(rn_scheds)
 
 
-def run_simulation(expe_dir, test_expe, sweeper):
+def run_simulation(expe_dir, test_expe, toggle_log, sweeper):
     parameters = sweeper.get_next()
     while parameters is not None:
-        root_results_dir = f"{expe_dir}/results-reconfiguration-esds/topologies/{['paper', 'tests'][test_expe]}"
-        results_dir = f"{parameters['tplgy_name']}-{parameters['rn_type']}-{parameters['nodes_count']}/{parameters['id_run']}"
+        root_results_dir = f"{expe_dir}/leverages-results/{['paper', 'tests'][test_expe]}"
+        expe_key = f"{parameters['tplgy_name']}-{parameters['rn_type']}-{parameters['leverage']}-{parameters['nodes_count']}"
+        results_dir = f"{expe_key}/{parameters['id_run']}"
         expe_results_dir = f"{root_results_dir}/{results_dir}"
         os.makedirs(expe_results_dir, exist_ok=True)
 
@@ -82,6 +84,7 @@ def run_simulation(expe_dir, test_expe, sweeper):
                 "all_uptimes_schedules": all_uptimes_schedules,
                 "tasks_list": tasks_list,
                 "topology": B,
+                "leverage": parameters["leverage"],
                 "s": shared_memory.SharedMemory(f"shm_cps_{time.time_ns()}", create=True, size=nodes_count)
             }
 
@@ -90,8 +93,10 @@ def run_simulation(expe_dir, test_expe, sweeper):
             start_time = time.perf_counter()
             for node_num in range(nodes_count):
                 smltr.create_node("on_pull", interfaces=["eth0"], args={**node_arguments, **{"rn_num": rn_num}})
-            with contextlib.redirect_stdout(None):
+            stdout = None if toggle_log is None else open(f"/tmp/{expe_key}.txt", "w")
+            with contextlib.redirect_stdout(stdout):
                 smltr.run(interferences=False)
+            if stdout: stdout.close()
             node_arguments["s"].close()
             try:
                 node_arguments["s"].unlink()
@@ -120,11 +125,12 @@ def run_simulation(expe_dir, test_expe, sweeper):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Must specify a configuration file")
-        exit(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('expe_parameters')
+    parser.add_argument('-v', action="store_true")
+    args = parser.parse_args()
 
-    with open(sys.argv[1]) as f:
+    with open(args.expe_parameters) as f:
         expe_parameters = yaml.safe_load(f)
 
     test_expe, expe_dir = expe_parameters["test_expe"] == "True", expe_parameters["expe_dir"]
@@ -136,6 +142,8 @@ def main():
     id_run_min, id_run_max = expe_parameters["id_run_boundaries"].values()
     expe_parameters_sweep = {
         "tplgy_name": expe_parameters["tplgy_name"],
+        "nb_seq_deps": expe_parameters["nb_seq_deps"],
+        "leverage": expe_parameters["leverage"],
         "rn_type": expe_parameters["rn_type"],
         "nodes_count": expe_parameters["nodes_count"],
         "id_run": [*range(id_run_min, id_run_max)],
@@ -156,7 +164,7 @@ def main():
     nb_cores = int(cpu_count() * 0.7)
     processes = []
     for _ in range(nb_cores):
-        p = Process(target=run_simulation, args=(expe_dir, test_expe, sweeper))
+        p = Process(target=run_simulation, args=(expe_dir, test_expe, args.v, sweeper))
         p.start()
         processes.append(p)
     for p in processes:
