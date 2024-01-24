@@ -48,6 +48,7 @@ def execute(api: Node):
 
         # Uptime period
         api.turn_on()
+        api.log(f"Uptime {upt_num}")
         node_cons.set_power(IDLE_CONSO)
         uptime_end = uptime + UPT_DURATION
         # Handle RN's uptimes overlaps

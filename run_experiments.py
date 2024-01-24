@@ -10,28 +10,38 @@ import time
 from os.path import exists
 
 import esds
+import numpy as np
 import yaml
 from execo_engine import ParamSweeper, sweep
 
 import shared_methods
-from topologies import clique, chain, ring, star, grid, tasks_list_agg_0, tasks_list_grid_fav, tasks_list_agg_middle, \
-    tasks_list_grid_nonfav, tree, tasks_list_tree_fav, tasks_list_tree_nonfav, tasks_list_starchain_fav, \
-    tasks_list_starchain_nonfav, starchain
 
-tasks_list_tplgy = {
-    "star-fav": (tasks_list_agg_0, star),
-    "star-nonfav": (tasks_list_agg_middle, star),
-    "clique-fav": (tasks_list_agg_0, clique),
-    "ring-fav": (tasks_list_agg_0, ring),
-    "chain-fav": (tasks_list_agg_middle, chain),
-    "chain-nonfav": (tasks_list_agg_0, chain),
-    "grid-fav": (tasks_list_grid_fav, grid),
-    "grid-nonfav": (tasks_list_grid_nonfav, grid),
-    "tree-fav": (tasks_list_tree_fav, tree),
-    "tree-nonfav": (tasks_list_tree_nonfav, tree),
-    "starchain-fav": (tasks_list_starchain_fav, starchain),
-    "starchain-nonfav": (tasks_list_starchain_nonfav, starchain),
-}
+
+def tasks_list_observer(nb_sec_deps, nb_obs):
+    return [
+        [[(f"obs{obs_num}_dep{dep_num}", 10, None)] for dep_num in range(nb_sec_deps)]
+        for obs_num in range(nb_obs)
+    ]
+
+
+def tasks_list_aggregator(nb_sec_deps, nb_obs):
+    return [
+        [[(f"agg_obs{obs_num}_dep{dep_num}", 10, f"obs{obs_num}_dep{dep_num}")] for dep_num in range(nb_sec_deps) for obs_num in range(nb_obs)]
+    ]
+
+
+def topology(n_obs, n_hops, bw):
+    n_nodes = n_obs * n_hops + 1
+    L = np.full((n_nodes, n_nodes), 0)
+    B = [[bw]*(n_obs+1) + [0]*n_obs*(n_hops-1)]
+    for node_num in range(1, n_nodes):
+        node_bws = [0]*n_nodes
+        node_bws[max(node_num-n_obs,0)] = bw    # previous
+        node_bws[node_num] = bw                 # self
+        if node_num+n_obs < n_nodes:
+            node_bws[node_num+n_obs] = bw       # next
+        B.append(node_bws)
+    return np.asarray(B), L
 
 
 def _update_schedules_with_rn(rn_num, all_uptimes_schedules, B):
@@ -45,8 +55,11 @@ def _update_schedules_with_rn(rn_num, all_uptimes_schedules, B):
 def run_simulation(expe_dir, test_expe, toggle_log, sweeper):
     parameters = sweeper.get_next()
     while parameters is not None:
-        root_results_dir = f"{expe_dir}/leverages-results/{['paper', 'tests'][test_expe]}"
-        expe_key = f"{parameters['tplgy_name']}-{parameters['rn_type']}-{parameters['leverage']}-{parameters['nodes_count']}"
+        root_results_dir = f"{expe_dir}/leverages-results/simulation_metrics"
+        n_obs, n_hops, n_deps = parameters["n_obs"], parameters["n_hops"], parameters["n_deps"]
+        n_nodes = n_obs * n_hops + 1
+
+        expe_key = f"{parameters['leverage']}-{n_obs}-{n_hops}-{n_deps}"
         results_dir = f"{expe_key}/{parameters['id_run']}"
         expe_results_dir = f"{root_results_dir}/{results_dir}"
         os.makedirs(expe_results_dir, exist_ok=True)
@@ -61,38 +74,37 @@ def run_simulation(expe_dir, test_expe, toggle_log, sweeper):
                     continue
 
             # Setup parameters
-            nodes_count = parameters["nodes_count"]
-            tasks_list_func, tplgy_func = tasks_list_tplgy[parameters["tplgy_name"]]
-            B, L = tplgy_func(nodes_count, shared_methods.BANDWIDTH)
+            B, L = topology(n_obs, n_hops, shared_methods.BANDWIDTH)
             smltr = esds.Simulator({"eth0": {"bandwidth": B, "latency": L, "is_wired": False}})
 
             with open(uptimes_schedule_name) as f:
                 all_uptimes_schedules = json.load(f)  # Get complete view of uptimes schedules for aggregated_send optimization
 
             # Uptime schedules with RN
-            agg_num, rn_num, tasks_list = tasks_list_func(nodes_count - 1)
-            if parameters["rn_type"] in ["rn_agg", "rn_not_agg"]:
-                if parameters["rn_type"] == "rn_agg":
-                    rn_num = agg_num
-                _update_schedules_with_rn(rn_num, all_uptimes_schedules, B)
-            if parameters["rn_type"] == "no_rn":
-                rn_num = -1
+            obs_tasks = tasks_list_observer(n_deps, n_obs)
+            agg_tasks = tasks_list_aggregator(n_deps, n_obs)
+            tasks_list = agg_tasks + [[[]]]*(n_nodes-1)
+            first_obs_num = n_obs*(n_hops-1) + 1
+            obs_task_num = 0
+            for obs_num in range(first_obs_num, n_nodes):
+                tasks_list[obs_num] = obs_tasks[obs_task_num]
+                obs_task_num += 1
 
             node_arguments = {
                 "results_dir": expe_results_dir,
-                "nodes_count": nodes_count,
+                "nodes_count": n_nodes,
                 "all_uptimes_schedules": all_uptimes_schedules,
                 "tasks_list": tasks_list,
                 "topology": B,
                 "leverage": parameters["leverage"],
-                "s": shared_memory.SharedMemory(f"shm_cps_{time.time_ns()}", create=True, size=nodes_count)
+                "s": shared_memory.SharedMemory(f"shm_cps_{time.time_ns()}", create=True, size=n_nodes)
             }
 
             # Setup and launch simulation
             print(f"Starting {parameters}")
             start_time = time.perf_counter()
-            for node_num in range(nodes_count):
-                smltr.create_node("on_pull", interfaces=["eth0"], args={**node_arguments, **{"rn_num": rn_num}})
+            for node_num in range(n_nodes):
+                smltr.create_node("on_pull", interfaces=["eth0"], args={**node_arguments, "rn_num": -1})
             stdout = None if toggle_log is None else open(f"/tmp/{expe_key}.txt", "w")
             with contextlib.redirect_stdout(stdout):
                 smltr.run(interferences=False)
@@ -128,6 +140,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('expe_parameters')
     parser.add_argument('-v', action="store_true")
+    parser.add_argument('--save-sweeps', action="store_true")
     args = parser.parse_args()
 
     with open(args.expe_parameters) as f:
@@ -142,10 +155,11 @@ def main():
     id_run_min, id_run_max = expe_parameters["id_run_boundaries"].values()
     expe_parameters_sweep = {
         "tplgy_name": expe_parameters["tplgy_name"],
-        "nb_seq_deps": expe_parameters["nb_seq_deps"],
         "leverage": expe_parameters["leverage"],
+        "n_deps": expe_parameters["n_deps"],
+        "n_obs": expe_parameters["n_obs"],
+        "n_hops": expe_parameters["n_hops"],
         "rn_type": expe_parameters["rn_type"],
-        "nodes_count": expe_parameters["nodes_count"],
         "id_run": [*range(id_run_min, id_run_max)],
     }
     # Create parameters list/sweeper
