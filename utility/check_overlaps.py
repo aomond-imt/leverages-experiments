@@ -1,11 +1,11 @@
 import json, argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--id_run', required=False, default=0)
-parser.add_argument('--node_1', required=False, default=0)
-parser.add_argument('--node_2', required=False, default=1)
+parser.add_argument('--id_run', required=False, default=0, type=int)
+parser.add_argument('--node_1', required=False, default=0, type=int)
+parser.add_argument('--node_2', required=False, default=1, type=int)
 parser.add_argument('--all', action="store_true")
-parser.add_argument('-n', default=None)
+parser.add_argument('-n', default=None, type=int)
 args = parser.parse_args()
 id_run, node_1, node_2, print_all, max_upt_num = args.id_run, args.node_1, args.node_2, args.all, args.n
 
