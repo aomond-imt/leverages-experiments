@@ -59,7 +59,7 @@ def run_simulation(expe_dir, test_expe, toggle_log, sweeper):
         n_obs, n_hops, n_deps = parameters["n_obs"], parameters["n_hops"], parameters["n_deps"]
         n_nodes = n_obs * n_hops + 1
 
-        expe_key = f"{parameters['leverage']}-{n_obs}-{n_hops}-{n_deps}"
+        expe_key = f"{parameters['type_comms']}-{n_obs}-{n_hops}-{n_deps}"
         results_dir = f"{expe_key}/{parameters['id_run']}"
         expe_results_dir = f"{root_results_dir}/{results_dir}"
         os.makedirs(expe_results_dir, exist_ok=True)
@@ -96,7 +96,7 @@ def run_simulation(expe_dir, test_expe, toggle_log, sweeper):
                 "all_uptimes_schedules": all_uptimes_schedules,
                 "tasks_list": tasks_list,
                 "topology": B,
-                "leverage": parameters["leverage"],
+                "type_comms": parameters["type_comms"],
                 "s": shared_memory.SharedMemory(f"shm_cps_{time.time_ns()}", create=True, size=n_nodes)
             }
 
@@ -154,12 +154,10 @@ def main():
 
     id_run_min, id_run_max = expe_parameters["id_run_boundaries"].values()
     expe_parameters_sweep = {
-        "tplgy_name": expe_parameters["tplgy_name"],
-        "leverage": expe_parameters["leverage"],
+        "type_comms": expe_parameters["type_comms"],
         "n_deps": expe_parameters["n_deps"],
         "n_obs": expe_parameters["n_obs"],
         "n_hops": expe_parameters["n_hops"],
-        "rn_type": expe_parameters["rn_type"],
         "id_run": [*range(id_run_min, id_run_max)],
     }
     # Create parameters list/sweeper

@@ -28,7 +28,7 @@ def execute(api: Node):
     results_dir = api.args["results_dir"]
     nodes_count = api.args["nodes_count"]
     topology = api.args["topology"]
-    leverage = api.args["leverage"]
+    type_comms = api.args["type_comms"]
 
     deps_to_retrieve = set(task_dep for _,_,task_dep in current_parallel_tasks)
     api.log(f"deps_to_retrieve: {deps_to_retrieve}")
@@ -110,7 +110,7 @@ def execute(api: Node):
                 # api.log(f"Isolated uptime, simulating {th_aggregated_send} sends")
 
             # communication period
-            if leverage == "pull":
+            if type_comms == "pull":
                 tot_msg_rcv, tot_msg_sent = pull(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end)
             else:
                 tot_msg_rcv, tot_msg_sent = push(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end)
