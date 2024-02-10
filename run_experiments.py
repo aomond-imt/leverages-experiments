@@ -59,7 +59,7 @@ def run_simulation(expe_dir, test_expe, toggle_log, sweeper):
         n_obs, n_hops, n_deps = parameters["n_obs"], parameters["n_hops"], parameters["n_deps"]
         n_nodes = n_obs * n_hops + 1
 
-        expe_key = f"{parameters['type_comms']}-{n_obs}-{n_hops}-{n_deps}"
+        expe_key = f"{parameters['type_comms']}-{n_obs}-{n_hops}-{n_deps}-{parameters['data_size']}"
         results_dir = f"{expe_key}/{parameters['id_run']}"
         expe_results_dir = f"{root_results_dir}/{results_dir}"
         os.makedirs(expe_results_dir, exist_ok=True)
@@ -97,6 +97,7 @@ def run_simulation(expe_dir, test_expe, toggle_log, sweeper):
                 "tasks_list": tasks_list,
                 "topology": B,
                 "type_comms": parameters["type_comms"],
+                "data_size": parameters["data_size"] / n_deps,
                 "s": shared_memory.SharedMemory(f"shm_cps_{time.time_ns()}", create=True, size=n_nodes)
             }
 
@@ -137,6 +138,14 @@ def run_simulation(expe_dir, test_expe, toggle_log, sweeper):
 
 
 def main():
+    # TMP ad-hoc
+    try:
+        os.remove("../esds-sweeper/inprogress")
+        os.remove("../esds-sweeper/done")
+        os.remove("../esds-sweeper/sweeps")
+    except FileNotFoundError:
+        pass
+
     parser = argparse.ArgumentParser()
     parser.add_argument('expe_parameters')
     parser.add_argument('-v', action="store_true")
@@ -158,6 +167,7 @@ def main():
         "n_deps": expe_parameters["n_deps"],
         "n_obs": expe_parameters["n_obs"],
         "n_hops": expe_parameters["n_hops"],
+        "data_size": expe_parameters["data_size"],
         "id_run": [*range(id_run_min, id_run_max)],
     }
     # Create parameters list/sweeper

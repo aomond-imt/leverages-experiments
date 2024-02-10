@@ -5,7 +5,7 @@ from esds.node import Node
 from esds.plugins.power_states import PowerStates, PowerStatesComms
 
 from shared_methods import is_time_up, is_isolated_uptime, remaining_time, FREQ_POLLING, c, is_finished, STRESS_CONSO, \
-    IDLE_CONSO, COMMS_CONSO, INTERFACE_NAME, UPT_DURATION
+    IDLE_CONSO, COMMS_CONSO, INTERFACE_NAME, UPT_DURATION, REQ_HEADER_SIZE, BANDWIDTH
 
 
 def execute(api: Node):
@@ -29,10 +29,17 @@ def execute(api: Node):
     nodes_count = api.args["nodes_count"]
     topology = api.args["topology"]
     type_comms = api.args["type_comms"]
+    data_size = api.args["data_size"]
 
-    deps_to_retrieve = set(task_dep for _,_,task_dep in current_parallel_tasks)
+    deps_to_retrieve = set(task_dep for _,_,task_dep in current_parallel_tasks if task_dep is not None)
+    if type_comms == "pull_anticipation":
+        for parallel_tasks in tasks_list:
+            for _,_,task_dep in parallel_tasks:
+                if task_dep is not None:
+                    deps_to_retrieve.add(task_dep)
     api.log(f"deps_to_retrieve: {deps_to_retrieve}")
-    deps_retrieved = {None}
+    sent_data_by_receiver_id = []
+    deps_retrieved = set()
     local_termination = 0
     # Duty-cycle simulation
     upt_num = 0
@@ -64,7 +71,7 @@ def execute(api: Node):
                 tasks_to_do = []
                 for task in current_parallel_tasks:
                     _, _, task_dep = task
-                    if task_dep in deps_retrieved:
+                    if task_dep is None or task_dep in deps_retrieved:
                         tasks_to_do.append(task)
 
                 if len(tasks_to_do) > 0:
@@ -86,7 +93,8 @@ def execute(api: Node):
                     s.buf[api.node_id] = int(current_parallel_tasks is None)
                     if current_parallel_tasks is not None:
                         for _, _, task_dep in current_parallel_tasks:
-                            deps_to_retrieve.add(task_dep)
+                            if task_dep is not None:
+                                deps_to_retrieve.add(task_dep)
 
                     # Save metrics
                     if current_parallel_tasks is None:
@@ -100,20 +108,20 @@ def execute(api: Node):
             if is_isolated_uptime(api.node_id, tot_uptimes, api.args['all_uptimes_schedules'], nodes_count, topology, api.args['rn_num']) and not is_finished(s) and not is_time_up(api, uptime_end):
                 remaining_t = remaining_time(api, uptime_end)
                 api.wait(remaining_t)
-                th_aggregated_send = remaining_t / ((257 / 6250) + 0.01 + FREQ_POLLING)
+                th_aggregated_send = remaining_t / ((REQ_HEADER_SIZE / (BANDWIDTH/8)) + 0.01 + FREQ_POLLING)
                 aggregated_send += int(th_aggregated_send)
 
                 # Check if sending an additional message doesn't cross the deadline, and add it if it's the case
-                if int(th_aggregated_send) - th_aggregated_send <= 257 / 6250:
+                if int(th_aggregated_send) - th_aggregated_send <= REQ_HEADER_SIZE / (BANDWIDTH/8):
                     aggregated_send += 1
 
                 # api.log(f"Isolated uptime, simulating {th_aggregated_send} sends")
 
             # communication period
-            if type_comms == "pull":
-                tot_msg_rcv, tot_msg_sent = pull(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end)
+            if "pull" in type_comms:
+                tot_msg_rcv, tot_msg_sent = pull(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end, data_size)
             else:
-                tot_msg_rcv, tot_msg_sent = push(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end)
+                tot_msg_rcv, tot_msg_sent = push(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end, sent_data_by_receiver_id, data_size)
 
             if not is_finished(s):
                 api.wait(min(FREQ_POLLING, remaining_time(api, uptime_end)))
@@ -140,7 +148,7 @@ def execute(api: Node):
             "global_termination_time": c(api),
             "local_termination_time": local_termination,
             "node_cons": node_cons.energy,
-            "comms_cons": float(comms_cons.get_energy() + aggregated_send * (257 / 6250) * COMMS_CONSO),
+            "comms_cons": float(comms_cons.get_energy() + aggregated_send * (REQ_HEADER_SIZE / (BANDWIDTH/8)) * COMMS_CONSO),
             "tot_uptimes": tot_uptimes,
             "tot_msg_sent": tot_msg_sent,
             "tot_msg_rcv": tot_msg_rcv,
@@ -151,10 +159,10 @@ def execute(api: Node):
         }, f)
 
 
-def pull(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end):
+def pull(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end, data_size):
     # Ask for missing deps
     if len(deps_to_retrieve) > 0 and not is_time_up(api, uptime_end):
-        api.sendt("eth0", ("req", deps_to_retrieve), 257, 0, timeout=remaining_time(api, uptime_end))
+        api.sendt("eth0", ("req", deps_to_retrieve), REQ_HEADER_SIZE, 0, timeout=remaining_time(api, uptime_end))
         tot_msg_sent += 1
 
     # Receive msgs and put them in buffer (do not put duplicates in buf)
@@ -176,7 +184,7 @@ def pull(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, up
             deps_to_send = deps_retrieved.intersection(deps)
             if len(deps_to_send) > 0:
                 api.log(f"Sending deps: {deps_to_send}")
-                api.sendt("eth0", ("res", deps_to_send), 257, 0, timeout=remaining_time(api, uptime_end))
+                api.sendt("eth0", ("res", deps_to_send), REQ_HEADER_SIZE + data_size*len(deps_to_send), 0, timeout=remaining_time(api, uptime_end))
                 tot_msg_sent += 1
             deps_to_retrieve.update(deps.difference(deps_retrieved))
         if type_msg == "res":
@@ -189,10 +197,10 @@ def pull(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, up
     return tot_msg_rcv, tot_msg_sent
 
 
-def push(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end):
-    # Ask for missing deps
+def push(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, uptime_end, sent_data_by_receiver_id, data_size):
+    # Ping awake nodes
     if len(deps_retrieved) > 0 and not is_time_up(api, uptime_end):
-        api.sendt("eth0", deps_retrieved, 257, 0, timeout=remaining_time(api, uptime_end))
+        api.sendt("eth0", ("ping", api.node_id, "ping"), REQ_HEADER_SIZE, 0, timeout=remaining_time(api, uptime_end))
         tot_msg_sent += 1
 
     # Receive msgs and put them in buffer (do not put duplicates in buf)
@@ -209,11 +217,21 @@ def push(api, deps_retrieved, deps_to_retrieve, s, tot_msg_rcv, tot_msg_sent, up
 
     # Treat each received msg
     for data in buf:
-        for dep in data:
-            if dep not in deps_retrieved:
-                api.log(f"Retrieved deps: {dep}")
-                deps_retrieved.add(dep)
-            if dep in deps_to_retrieve:
-                deps_to_retrieve.remove(dep)
+        type_msg, receiver_id, deps = data
+        if type_msg == "ping":
+            api.sendt("eth0", ("ping_ack", api.node_id, "ping"), REQ_HEADER_SIZE, 0, timeout=remaining_time(api, uptime_end))
+            tot_msg_sent += 1
+        if type_msg == "ping_ack":
+            if (receiver_id, deps_retrieved) not in sent_data_by_receiver_id:
+                sent_data_by_receiver_id.append((receiver_id, deps_retrieved))
+                api.sendt("eth0", ("res", api.node_id, deps_retrieved), REQ_HEADER_SIZE + data_size*len(deps_retrieved), 0, timeout=remaining_time(api, uptime_end))
+                tot_msg_sent += 1
+        if type_msg == "res":
+            for dep in deps:
+                if dep not in deps_retrieved:
+                    api.log(f"Retrieved deps: {dep}")
+                    deps_retrieved.add(dep)
+                if dep in deps_to_retrieve:
+                    deps_to_retrieve.remove(dep)
 
     return tot_msg_rcv, tot_msg_sent
